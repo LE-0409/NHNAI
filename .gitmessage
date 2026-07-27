@@ -20,6 +20,7 @@
 #   screen     화면 (Assets/UI/Screens/)
 #   game       게임 로직 (NHNAI.Game)
 #   editor     에디터 툴 (Assets/Editor/)
+#   art        Blender 파이프라인·3D 에셋 (ArtPipeline/, Assets/Art/)
 #   prototype  HTML 프로토타입 (prototype/)
 #   unity      프로젝트 설정·패키지 (ProjectSettings, manifest.json, asmdef)
 #

@@ -1,0 +1,5 @@
+# Where this ArtPipeline kit came from (written by install_kit.ps1).
+# If a copy looks out of date, compare 'commit' and reinstall with -Force from a newer source.
+source : D:\00git\DungeonMiner\ArtPipeline
+commit : 8744eda
+date   : 2026-07-28 04:50:47

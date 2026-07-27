@@ -100,3 +100,11 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 # prototype/ 은 소스이므로 커밋한다. 빌드 산출물이 생기면 여기에 추가한다.
+
+# ArtPipeline — Blender 에셋 파이프라인 생성물/도구 (커밋 제외)
+# 파이프라인 소스(lib·kit_templates·project·assets)는 커밋한다.
+/ArtPipeline/tools/
+/ArtPipeline/build/
+/ArtPipeline/previews/
+/ArtPipeline/reports/
+__pycache__/

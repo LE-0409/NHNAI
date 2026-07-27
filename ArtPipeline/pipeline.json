@@ -1,0 +1,16 @@
+{
+  "project": "NHNAI",
+  "engine": "unity",
+  "repoRoot": "..",
+  "assetsRoot": "Assets/Art",
+  "paletteRegistry": "project/palette_registry.py",
+  "dirs": {
+    "palette": "Palette",
+    "weapons": "Weapons",
+    "characters": "Characters",
+    "environment": "Environment"
+  },
+  "previews": "previews",
+  "build": "build",
+  "reports": "reports"
+}

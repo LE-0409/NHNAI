@@ -1,0 +1,16 @@
+{
+  "project": "__PROJECT__",
+  "engine": "__ENGINE__",
+  "repoRoot": "..",
+  "assetsRoot": "__ASSETS_ROOT__",
+  "paletteRegistry": "project/palette_registry.py",
+  "dirs": {
+    "palette": "Palette",
+    "weapons": "Weapons",
+    "characters": "Characters",
+    "environment": "Environment"
+  },
+  "previews": "previews",
+  "build": "build",
+  "reports": "reports"
+}
