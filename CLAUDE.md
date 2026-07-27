@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-NHNAI는 Unity로 만드는 게임이다. UI는 전부 **UI Toolkit**으로 만든다.
-uGUI(Canvas·RectTransform·Image·TextMeshPro)는 쓰지 않는다.
+NHNAI는 Unity로 만드는 3D 게임이다. UI는 **UI Toolkit이 기본**이다.
+uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다 (아래 「UI — 무엇으로 만드나」 참조).
 
 이 저장소의 코드는 **LLM이 작성한다는 전제**로 구조가 잡혀 있다.
 그래서 다음을 지킨다.
@@ -21,11 +21,16 @@ uGUI(Canvas·RectTransform·Image·TextMeshPro)는 쓰지 않는다.
 | 항목 | 값 |
 |---|---|
 | Unity | 6000.3.10f1 (Unity 6.3) |
-| 렌더 파이프라인 | URP 2D |
-| UI | UI Toolkit 전용 |
+| 렌더 파이프라인 | URP 3D (PC · Mobile 렌더러 분리) |
+| UI | UI Toolkit 기본, uGUI 예외 허용 |
+| 입력 | Input System (`activeInputHandler: 1`) |
 | 빌드 타깃 | PC (Windows/Mac) + 모바일 (Android/iOS) |
 | 화면 방향 | **landscape 고정.** 세로 모드 미지원 |
 | 기준 해상도 | 1920 x 1080 |
+
+화면 방향과 기준 해상도는 문서에만 있는 규칙이 아니라 `ProjectSettings/ProjectSettings.asset`에
+실제로 박혀 있다 — `allowedAutorotateToPortrait`/`PortraitUpsideDown`이 `0`,
+landscape 둘만 `1`이다. 세로를 지원하게 되면 이 표와 설정을 **같이** 고친다.
 
 ### 아직 안 정한 것
 
@@ -40,6 +45,34 @@ uGUI(Canvas·RectTransform·Image·TextMeshPro)는 쓰지 않는다.
 - 화면·컴포넌트 USS (토큰이 없으면 리터럴을 쓰게 되고, 나중에 전부 다시 고쳐야 한다)
 
 **정해지지 않은 것을 추측해서 코드로 만들지 않는다.** 먼저 물어본다.
+
+---
+
+## UI — 무엇으로 만드나
+
+**기본은 UI Toolkit이다.** uGUI는 *UI Toolkit으로 되지 않는 기능*에 한해 쓴다.
+"익숙해서" / "예제가 uGUI라서" / "빨라서"는 사유가 아니다.
+
+### uGUI를 써도 되는 경우
+
+| 경우 | 이유 |
+|---|---|
+| **월드 스페이스 UI** — 3D 오브젝트에 붙는 체력바·이름표·말풍선·조작 패널 | UI Toolkit의 world-space UIDocument 는 Unity 6.3에서도 제약이 크다. uGUI의 World Space Canvas 가 확실하다 |
+| UI 위에 **파티클·VFX**를 섞어 그려야 할 때 | UI Toolkit 패널은 파티클 렌더러와 같은 레이어에 못 낀다 |
+| **3D 카메라 이펙트와 정렬**되어야 하는 오버레이 (Screen Space - Camera) | UI Toolkit 패널은 카메라 스택 중간에 끼우기 어렵다 |
+| 사각형이 아닌 **복잡한 마스킹** (Mask / RectMask2D) | USS 는 `overflow: hidden` 뿐이다 |
+| 도입한 **에셋스토어 UI 패키지**가 uGUI 기반일 때 | 다시 만드는 비용이 더 크면 그대로 쓴다 |
+
+**HUD·메뉴·설정·인벤토리·다이얼로그 같은 스크린 스페이스 UI는 전부 UI Toolkit이다.**
+위 표에 없으면 UI Toolkit으로 만든다. 표에 추가하고 싶으면 먼저 물어본다.
+
+### uGUI를 쓸 때 지키는 것
+
+- **파일 맨 위에 사유를 한 줄 남긴다.** `// uGUI 사용: 월드 스페이스 체력바 — UI Toolkit world-space 제약`
+- **격리한다.** uGUI Canvas 하나가 UI Toolkit 패널 영역까지 넘어오지 않게 한다.
+- **섞어 겹치지 않는다.** UIDocument(PanelSettings 의 sort order)와 uGUI Canvas(`sortingOrder`)는
+  렌더 경로가 달라 겹치면 순서 제어가 까다롭다. 화면 영역을 나눠 쓴다.
+- 텍스트는 uGUI 쪽에서만 TextMeshPro 를 쓴다. UI Toolkit 쪽에 끌고 오지 않는다.
 
 ---
 
@@ -62,12 +95,14 @@ NHNAI/
 │   └── reference/
 │       └── unity-ui-toolkit/  ← UI Toolkit 참조 문서 (README.md 가 목록)
 │
-└── Assets/                    ← Unity URP 2D 템플릿 그대로. 직접 만든 것 없음
+└── Assets/                    ← Unity URP 3D 템플릿 그대로. 직접 만든 것 없음
     ├── Scenes/SampleScene.unity
-    ├── Settings/              ← URP 렌더러·볼륨 프로파일
-    ├── DefaultVolumeProfile.asset
+    ├── Settings/              ← PC_ / Mobile_ 렌더러 쌍, 볼륨 프로파일, URP 글로벌 설정
     └── InputSystem_Actions.inputactions
 ```
+
+`Assets/Settings/`의 `PC_RPAsset` · `Mobile_RPAsset`은 품질 레벨과 짝지어져 있다.
+렌더 설정을 바꿀 때 **둘 다** 봐야 한다 — 한쪽만 고치면 플랫폼에 따라 화면이 달라진다.
 
 ### 앞으로 만들 구조
 
@@ -423,7 +458,8 @@ LLM이 파일 하나만 읽고 수정할 수 있다. UXML로 쪼개면 구조와
 
 ## 금지 사항
 
-- **uGUI를 쓰지 않는다.** Canvas / RectTransform / Image / Text / TextMeshPro 금지.
+- **편의를 이유로 uGUI를 쓰지 않는다.** 「UI — 무엇으로 만드나」의 표에 해당할 때만 쓰고,
+  쓸 때는 파일 맨 위에 사유를 남긴다. 스크린 스페이스 UI는 전부 UI Toolkit이다.
 - **세로(portrait) 레이아웃을 만들지 않는다.** landscape 고정이다.
 - **`DESIGN.md`에 없는 색·간격을 하드코딩하지 않는다.** 먼저 토큰을 추가한다.
 - **`NHNAI.Game`에서 `UnityEngine.UIElements`를 참조하지 않는다.**

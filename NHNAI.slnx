@@ -1,5 +1,0 @@
-﻿<Solution>
-  <Project Path="NHNAI.Game.csproj" />
-  <Project Path="NHNAI.UI.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
-</Solution>
