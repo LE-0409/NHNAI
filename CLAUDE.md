@@ -95,10 +95,35 @@ NHNAI/
 │   └── reference/
 │       └── unity-ui-toolkit/  ← UI Toolkit 참조 문서 (README.md 가 목록)
 │
-└── Assets/                    ← Unity URP 3D 템플릿 그대로. 직접 만든 것 없음
-    ├── Scenes/SampleScene.unity
-    ├── Settings/              ← PC_ / Mobile_ 렌더러 쌍, 볼륨 프로파일, URP 글로벌 설정
-    └── InputSystem_Actions.inputactions
+├── ArtPipeline/               ← Blender 에셋 파이프라인 (Unity 밖)
+│   ├── lib/lowpoly_lib/       ← 메시 빌더 · 팔레트 · 익스포트 · 프리뷰
+│   ├── project/palette_registry.py  ← 이 프로젝트의 색. 선언 순서 = UV 셀 인덱스
+│   └── assets/{에셋}/generate_{에셋}.py
+│
+└── Assets/
+    ├── Art/                   ← ArtPipeline 산출물. 손으로 만들지 않는다
+    │   ├── Environment/*.fbx  ← CellRoom · SlotMachine · CeilingLamp · LightCone
+    │   ├── Materials/*.mat    ← ArtMaterialLibrary 가 생성
+    │   └── Palette/palette.png
+    │
+    ├── Scripts/               ← 어셈블리 NHNAI.Game — UI 에 의존하지 않는 게임 코드
+    │   ├── NHNAI.Game.asmdef
+    │   └── Player/PlayerLook.cs   ← 마우스 시점
+    │
+    ├── Editor/                ← 에디터 툴 (asmdef 없음 = Assembly-CSharp-Editor)
+    │   ├── ArtMaterialLibrary.cs  ← .mat 생성 + FBX 머티리얼 리맵
+    │   └── CellRoomBootstrap.cs   ← 독방 씬의 정본
+    │
+    ├── Shaders/LightCone.shader   ← 전등 아래 빛 기둥
+    │
+    ├── Scenes/                ← 전부 부트스트랩이 생성. 손으로 쓰지 않는다
+    │   ├── CellRoom.unity
+    │   └── SampleScene.unity  ← URP 템플릿 잔재. 안 쓴다
+    │
+    ├── Settings/              ← PC_ / Mobile_ 렌더러 쌍, URP 글로벌 설정
+    │   └── CellRoomVolume.asset   ← 포스트 프로세싱. 부트스트랩이 생성
+    │
+    └── InputSystem_Actions.inputactions   ← URP 템플릿 기본. 아직 안 쓴다
 ```
 
 `Assets/Settings/`의 `PC_RPAsset` · `Mobile_RPAsset`은 품질 레벨과 짝지어져 있다.
@@ -106,38 +131,25 @@ NHNAI/
 
 ### 앞으로 만들 구조
 
-아래는 **계획**이다. 아직 하나도 없다. 만들 때 이 배치와 이름을 따른다.
+아래는 **계획**이다. 아직 없다. 만들 때 이 배치와 이름을 따른다.
 
 ```
 NHNAI/
 ├── DESIGN.md                  ← 디자인 토큰 원본 (single source of truth)
 │
+├── docs/game-concepts.md      ← 게임 규칙의 정본
+│
 ├── prototype/                 ← HTML/CSS 프로토타입 (Unity 밖, 빌드에 포함 안 됨)
 │   ├── README.md              ← 변환 규칙 · CSS→USS 치환표
-│   ├── tokens.css             ← tokens.uss 와 쌍
-│   ├── base.css               ← base.uss 와 쌍
-│   └── {화면}.html + .css     ← 화면별 쌍
+│   ├── tokens.css · base.css  ← tokens.uss · base.uss 와 쌍
+│   └── {화면}.html + .css
 │
 └── Assets/
-    ├── UI/                    ← 어셈블리 NHNAI.UI
-    │   ├── NHNAI.UI.asmdef
-    │   ├── Theme/
-    │   │   ├── tokens.uss     ← 색·간격·타이포·크기 변수. 여기 없는 값은 쓰지 않는다
-    │   │   ├── base.uss       ← 타이포 스케일, 레이아웃 유틸, 공용 컴포넌트
-    │   │   └── GameTheme.tss  ← 위를 묶는 런타임 테마. 새 컴포넌트 USS 는 여기 등록
-    │   ├── Components/{이름}/ ← 재사용 컴포넌트 (커스텀 컨트롤). .cs + .uss
-    │   └── Screens/{화면}/    ← 화면. {화면}.uxml + .uss + .cs
-    │
-    ├── Scripts/               ← 어셈블리 NHNAI.Game — UI 에 의존하지 않는 게임 코드
-    │   └── NHNAI.Game.asmdef
-    │
-    ├── Editor/                ← 에디터 툴 (asmdef 없음 = Assembly-CSharp-Editor)
-    │   └── UiBootstrap.cs     ← PanelSettings · 씬 생성
-    │
-    ├── Settings/UI/
-    │   └── GamePanelSettings.asset   ← UiBootstrap 이 생성
-    │
-    └── Scenes/{화면}.unity    ← UiBootstrap 이 생성. 손으로 쓰지 않는다
+    └── UI/                    ← 어셈블리 NHNAI.UI
+        ├── NHNAI.UI.asmdef
+        ├── Theme/             ← tokens.uss · base.uss · GameTheme.tss
+        ├── Components/{이름}/ ← 재사용 컴포넌트 (커스텀 컨트롤). .cs + .uss
+        └── Screens/{화면}/    ← 화면. {화면}.uxml + .uss + .cs
 ```
 
 ### 어셈블리 의존 방향

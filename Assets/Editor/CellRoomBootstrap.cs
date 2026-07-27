@@ -173,6 +173,8 @@ namespace NHNAI.EditorTools
             data.antialiasingQuality = AntialiasingQuality.High;
 
             go.AddComponent<AudioListener>();
+            // 마우스 시점. 시작 각도는 위에서 준 Transform 을 그대로 이어받는다.
+            go.AddComponent<NHNAI.Game.Player.PlayerLook>();
         }
 
         // --- 포스트 프로세싱 --------------------------------------------------
