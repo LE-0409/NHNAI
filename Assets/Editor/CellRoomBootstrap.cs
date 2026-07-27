@@ -180,14 +180,25 @@ namespace NHNAI.EditorTools
         }
 
         /// <summary>
-        /// 릴 창 안쪽 조명. 발광 머티리얼은 스스로 빛나 보일 뿐 주변을 밝히지 않아서,
+        /// 릴 창 조명. 발광 머티리얼은 스스로 빛나 보일 뿐 주변을 밝히지 않아서,
         /// 실제로 릴을 비추려면 광원이 따로 필요하다. 기계가 켜져 있다는 인상이 여기서 나온다.
+        ///
+        /// ⚠️ **거리에 극도로 민감하다.** 릴 앞면이 z=+0.10 에 있어서, 처음에 광원을
+        /// z=+0.12 · y=1.18 에 두었더니 표면까지 2 cm 라 감쇠가 거의 없이 최대 밝기가
+        /// 그대로 꽂혀 창 안이 새하얗게 날아갔다. 세기를 만지기 전에 **거리부터** 본다.
+        ///
+        /// 지금 위치는 릴 창 위(마퀴 높이)다. 릴까지 0.37 m 로 떨어지고 위에서 비춰
+        /// 입사각도 눕는다 — 두 효과가 겹쳐 적당해진다.
+        ///
+        /// 이 배치는 그림자를 끈 것에 기대고 있다. 광원이 릴 격실 밖에 있어서,
+        /// 그림자를 켜면 프레임에 막혀 릴이 캄캄해진다. 그림자가 필요해지면
+        /// 광원을 격실 안으로 되돌리고 세기를 크게 낮춰야 한다.
         /// </summary>
         static void BuildReelBacklight(Transform machine)
         {
             var go = new GameObject("ReelBacklight_Light");
             go.transform.SetParent(machine, false);
-            go.transform.localPosition = new Vector3(0f, 1.18f, 0.12f);   // 릴 창 안쪽
+            go.transform.localPosition = new Vector3(0f, 1.55f, 0.12f);
 
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
