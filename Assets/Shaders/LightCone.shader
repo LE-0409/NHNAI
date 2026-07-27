@@ -3,25 +3,34 @@
 // URP 에는 볼류메트릭 라이팅이 없다(HDRP 전용). 그래서 원뿔 메시를 가산으로 그려
 // 빛이 공기 중에 퍼지는 것처럼 보이게 한다.
 //
-// 핵심은 가장자리 처리다. 그냥 반투명하게 칠하면 딱딱한 원뿔 실루엣이 보여 '빛'이
-// 아니라 '물체'로 읽힌다. 안개 속 빛기둥은 시선이 통과하는 두께가 가운데에서
-// 가장 길어 가운데가 밝고 가장자리로 갈수록 사라진다. 그래서 법선이 카메라를
-// 마주보는 곳(가운데)을 밝게, 스치는 곳(실루엣)을 어둡게 한다 — abs(dot(N,V)).
-// 프레넬을 반대로 쓰는 흔한 실수를 하면 테두리만 빛나는 고깔이 된다.
+// **고깔이 보이는 것이 의도다.** 사실적인 산란을 흉내내는 게 목표가 아니라,
+// 어둠 속에 뚜렷한 원뿔이 서 있는 그림이 목표다.
 //
-// 세로 방향은 전등에 가까운 위쪽이 밝고 바닥으로 갈수록 옅어진다.
+// 그래서 실루엣을 지우지 않는다. 안개 속 빛기둥을 물리적으로 흉내내려면 시선이
+// 통과하는 두께가 긴 가운데를 밝게(abs(dot(N,V))) 하는데, 그렇게 하면 가장자리가
+// 녹아 원뿔 형태 자체가 사라진다. 여기서는 반대로 간다 —
+//   · 몸통은 고르게 밝히고 (_Intensity)
+//   · 테두리를 한 번 더 올려 윤곽을 세운다 (_RimBoost)
+// 가산 블렌딩 + 양면이라 앞뒤 면이 겹쳐 더해지는 것도 형태를 또렷하게 만든다.
+//
+// 세로 방향은 전등에 가까운 위쪽이 밝고 바닥으로 갈수록 옅어지되,
+// _BottomFade 아래로는 떨어지지 않는다 — 0 까지 떨어뜨리면 바닥 근처에서 고깔이 끊긴다.
+//
 // _TopY / _BottomY 는 **오브젝트 공간** Y 로, LightCone.fbx 메시의 위/아래 끝이다
-// (Blender Z-up → Unity Y-up 변환 후 값). 메시를 다시 뽑으면 같이 맞춰야 한다.
+// (Blender Z-up → Unity Y-up 변환 후 값). 메시를 다시 뽑으면 같이 맞춰야 한다 —
+// generate_ceiling_lamp.py 가 실행 끝에 넣어야 할 값을 출력한다.
 Shader "NHNAI/LightCone"
 {
     Properties
     {
         _BaseColor("Color", Color) = (1, 1, 1, 1)
-        _Intensity("Intensity", Range(0, 3)) = 0.30
+        _Intensity("Intensity", Range(0, 4)) = 0.85
         _BottomY("Bottom Y (object space)", Float) = 0.02
-        _TopY("Top Y (object space)", Float) = 2.28
-        _Falloff("Vertical Falloff", Range(0.1, 6)) = 1.8
-        _EdgeSoftness("Edge Softness", Range(0.1, 6)) = 1.6
+        _TopY("Top Y (object space)", Float) = 4.48
+        _Falloff("Vertical Falloff", Range(0.1, 6)) = 1.1
+        _BottomFade("Bottom Fade Floor", Range(0, 1)) = 0.35
+        _RimBoost("Rim Boost", Range(0, 4)) = 1.3
+        _RimPower("Rim Power", Range(0.5, 8)) = 3.0
     }
 
     SubShader
@@ -68,7 +77,9 @@ Shader "NHNAI/LightCone"
                 float  _BottomY;
                 float  _TopY;
                 float  _Falloff;
-                float  _EdgeSoftness;
+                float  _BottomFade;
+                float  _RimBoost;
+                float  _RimPower;
             CBUFFER_END
 
             Varyings vert(Attributes IN)
@@ -87,12 +98,12 @@ Shader "NHNAI/LightCone"
                 float3 n = normalize(IN.normalWS);
                 float3 v = normalize(IN.viewDirWS);
 
-                // 가운데(법선이 카메라를 마주봄) 밝게, 실루엣(스침) 어둡게
-                float soft = pow(saturate(abs(dot(n, v))), _EdgeSoftness);
-                // 전등 쪽이 밝고 바닥으로 갈수록 옅어짐
-                float fade = pow(IN.heightT, _Falloff);
+                // 스치는 각도 = 원뿔의 윤곽선. 여기를 올려 고깔의 테두리를 세운다.
+                float rim = pow(saturate(1.0 - abs(dot(n, v))), _RimPower);
+                // 전등 쪽이 밝고 바닥으로 갈수록 옅어지되 _BottomFade 아래로는 안 내려간다
+                float fade = lerp(_BottomFade, 1.0, pow(IN.heightT, _Falloff));
 
-                float a = soft * fade * _Intensity;
+                float a = fade * (1.0 + _RimBoost * rim) * _Intensity;
                 return half4(_BaseColor.rgb * a, a);
             }
             ENDHLSL

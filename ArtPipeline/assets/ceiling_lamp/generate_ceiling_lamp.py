@@ -24,22 +24,30 @@ sys.path.insert(0, HERE)
 from lowpoly_lib import builders, export, palette, paths, preview
 
 # --- 치수 --------------------------------------------------------------------
-H = 3.0            # 방 내부 높이. cell_room 과 맞춰야 한다
+H = 6.0            # 방 내부 높이. cell_room 과 맞춰야 한다
 
-CORD_LEN = 0.46    # 천장에서 갓까지 전선 길이
-SHADE_H = 0.24     # 갓 높이
-SHADE_R_BOT = 0.30
-SHADE_R_TOP = 0.09
-BULB_R = 0.055
+CORD_LEN = 1.20    # 천장에서 갓까지 전선 길이
+SHADE_H = 0.30     # 갓 높이
+SHADE_R_BOT = 0.38
+SHADE_R_TOP = 0.11
+BULB_R = 0.065
 
-SHADE_TOP = H - CORD_LEN               # 2.54
-SHADE_BOT = SHADE_TOP - SHADE_H        # 2.30
+SHADE_TOP = H - CORD_LEN               # 4.80
+SHADE_BOT = SHADE_TOP - SHADE_H        # 4.50
 BULB_Z = SHADE_BOT + BULB_R * 0.4      # 갓 입구에 살짝 걸치게
 
-CONE_TOP = SHADE_BOT - 0.02
+# 원뿔은 **좁고 길게**. 넓적하면 고깔이 아니라 그냥 밝은 바닥으로 읽힌다.
+# 반각 약 22도 → 바닥 광원 지름 3.6 m 로, 8 m 방 안에서 슬롯머신 주변만 남기고
+# 나머지는 어둠에 둔다.
+CONE_TOP = SHADE_BOT - 0.02            # 4.48
 CONE_BOT = 0.02                        # 바닥과 Z-파이팅 나지 않게 살짝 띄운다
-CONE_R_TOP = 0.10
-CONE_R_BOT = 1.55
+CONE_R_TOP = 0.05
+CONE_R_BOT = 1.80
+
+# 스포트라이트를 어디에 두고 몇 도로 벌릴지가 이 값에서 나온다.
+# 메시 원뿔의 '가상 꼭짓점'(반지름 0 이 되는 지점)이 전구와 어긋나면 빛과 기둥이 따로 논다.
+_SLOPE = (CONE_R_BOT - CONE_R_TOP) / (CONE_TOP - CONE_BOT)
+_APEX_Z = CONE_TOP + CONE_R_TOP / _SLOPE
 
 builders.reset_scene()
 palette.write_palette_png()
@@ -80,3 +88,13 @@ palette.use_lightcone_material(cone)
 preview.render_turnaround("light_cone", [cone])
 export.export_static([cone], paths.art("Environment", "LightCone.fbx"))
 print("EXPORTED LightCone")
+
+# Unity 쪽에서 그대로 옮겨 적어야 하는 값들. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
+import math  # noqa: E402
+
+_half_angle = math.degrees(math.atan2(CONE_R_BOT, _APEX_Z - CONE_BOT))
+print("--- CellRoomBootstrap.cs / ArtMaterialLibrary.cs 에 반영할 값 ---")
+print(f"  BulbY (전구 높이)       : {BULB_Z:.3f}")
+print(f"  spotAngle (전체 각도)   : {_half_angle * 2:.1f}")
+print(f"  _BottomY / _TopY        : {CONE_BOT:.3f} / {CONE_TOP:.3f}")
+print(f"  (원뿔 가상 꼭짓점 Z     : {_APEX_Z:.3f} — 전구 높이와 가까울수록 좋다)")

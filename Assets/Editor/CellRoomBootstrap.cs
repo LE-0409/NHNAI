@@ -25,9 +25,11 @@ namespace NHNAI.EditorTools
         const string ProfilePath = "Assets/Settings/CellRoomVolume.asset";
         const string FbxDir = "Assets/Art/Environment";
 
-        // 방 치수 — ArtPipeline/assets/cell_room/generate_cell_room.py 와 맞춰야 한다
-        const float RoomH = 3.0f;
-        const float BulbY = 2.32f;      // 전구 높이 (generate_ceiling_lamp.py 의 BULB_Z)
+        // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
+        // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
+        const float RoomSize = 8.0f;    // 내부 한 변 (generate_cell_room.py 의 W · D)
+        const float BulbY = 4.526f;     // 전구 높이 (generate_ceiling_lamp.py 의 BULB_Z)
+        const float ConeAngle = 42.8f;  // 빛 원뿔 메시의 전체 벌어짐 각도
 
         const float EyeHeight = 1.62f;
 
@@ -112,11 +114,13 @@ namespace NHNAI.EditorTools
             var light = go.AddComponent<Light>();
             light.type = LightType.Spot;
             light.color = Color.white;
-            light.intensity = 12f;
-            light.range = 8f;
-            // 빛 원뿔 메시의 벌어짐과 맞춘다. 바닥 반경 1.55 / 높이 2.26 → 반각 약 34도.
-            light.spotAngle = 70f;
-            light.innerSpotAngle = 32f;
+            // 전등이 바닥에서 4.5 m 로 높아졌다. 감쇠가 거리 제곱이라 3 m 짜리 방에서 쓰던
+            // 세기를 그대로 두면 바닥이 거의 안 밝다.
+            light.intensity = 45f;
+            light.range = 12f;
+            // 빛 원뿔 **메시**의 벌어짐과 같은 각도여야 빛과 기둥이 따로 놀지 않는다.
+            light.spotAngle = ConeAngle;
+            light.innerSpotAngle = ConeAngle * 0.45f;
             light.shadows = LightShadows.Soft;
             light.shadowStrength = 1f;
             light.shadowBias = 0.02f;
@@ -133,10 +137,12 @@ namespace NHNAI.EditorTools
 
             // 안개는 '벽이 있는지도 모를 정도로 어둡다' 를 만드는 장치다.
             // 빛이 닿지 않는 벽을 검정으로 녹여 방의 경계를 지운다.
+            // 방이 8 m 로 넓어져 거리가 길어진 만큼 밀도는 낮춘다. 같은 값을 두면
+            // 빛 원뿔 주변까지 뭉개져 고깔 형태가 안 보인다.
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogColor = Color.black;
-            RenderSettings.fogDensity = 0.13f;
+            RenderSettings.fogDensity = 0.085f;
         }
 
         // --- 카메라 ----------------------------------------------------------
@@ -146,10 +152,10 @@ namespace NHNAI.EditorTools
             // 1인칭. 플레이어는 자신을 볼 수 없다 — 손도 팔도 없어서 카메라가 곧 플레이어다.
             var go = new GameObject("PlayerCamera");
             go.tag = "MainCamera";
-            // 슬롯머신(원점)에서 뒤로 물러나 정면을 본다. 방이 4 m 라 더 물러날 곳이 없다.
-            go.transform.position = new Vector3(0f, EyeHeight, 1.75f);
-            // 8도 숙인다. 방이 4 m 라 1.5 m 거리에서 정면을 보면 기계 하단이 화면 밖으로 나간다.
-            go.transform.rotation = Quaternion.Euler(8f, 180f, 0f);
+            // 슬롯머신(원점)에서 뒤로 물러나 정면을 본다. 이 위치는 빛 원뿔 **바깥**이다 —
+            // 어둠 속에 서서 밝은 기계를 바라보는 그림이라야 고깔이 고깔로 보인다.
+            go.transform.position = new Vector3(0f, EyeHeight, RoomSize * 0.32f);
+            go.transform.rotation = Quaternion.Euler(6f, 180f, 0f);
 
             var cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;

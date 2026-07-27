@@ -112,13 +112,17 @@ namespace NHNAI.EditorTools
                 return;
             }
 
+            // _BottomY / _TopY 는 LightCone.fbx 메시의 오브젝트 공간 Y 끝값이다.
+            // 눈대중으로 넣지 말 것 — generate_ceiling_lamp.py 가 실행 끝에 출력한다.
             var mat = Ensure(LightCone, "NHNAI/LightCone");
             mat.SetColor("_BaseColor", Color.white);
-            mat.SetFloat("_Intensity", 0.30f);
+            mat.SetFloat("_Intensity", 0.85f);
             mat.SetFloat("_BottomY", 0.02f);
-            mat.SetFloat("_TopY", 2.28f);
-            mat.SetFloat("_Falloff", 1.8f);
-            mat.SetFloat("_EdgeSoftness", 1.6f);
+            mat.SetFloat("_TopY", 4.48f);
+            mat.SetFloat("_Falloff", 1.1f);
+            mat.SetFloat("_BottomFade", 0.35f);
+            mat.SetFloat("_RimBoost", 1.3f);
+            mat.SetFloat("_RimPower", 3.0f);
             EditorUtility.SetDirty(mat);
         }
 
