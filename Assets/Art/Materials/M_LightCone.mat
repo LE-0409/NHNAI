@@ -27,10 +27,11 @@ Material:
     m_Floats:
     - _BottomFade: 0.35
     - _BottomY: 0.02
-    - _EdgeSoftness: 1.6
+    - _DepthFade: 1.2
+    - _EdgeSoftness: 0
     - _Falloff: 1.1
-    - _Intensity: 0.85
-    - _RimBoost: 1.3
+    - _Intensity: 0.02
+    - _RimBoost: 0
     - _RimPower: 3
     - _TopY: 4.48
     m_Colors:

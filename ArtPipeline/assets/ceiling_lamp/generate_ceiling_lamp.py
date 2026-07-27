@@ -67,6 +67,10 @@ lamp = builders.join_all([shade, cord, mount], "CeilingLamp")
 # 슬롯0 을 기준으로 합치므로, 여기서 합치면 발광 슬롯이 팔레트 슬롯에 먹힌다.
 bulb = builders.icosphere("LampBulb", BULB_R, subdiv=1, loc=(0, 0, BULB_Z))
 palette.use_emissive_material(bulb)
+# ⚠️ 오브젝트 하나짜리라도 join_all 을 거쳐야 한다. 트랜스폼을 정점에 굽지 않으면
+# 메시 로컬 좌표가 자기 원점 기준(±반높이)으로 남고, 위치는 FBX 노드 트랜스폼에만
+# 실린다. 그러면 Unity 에서 Transform 기본값으로 맞물리지 않는다.
+bulb = builders.join_all([bulb], "LampBulb")
 
 # 갓이 전구를 가리므로 기본 4방향으로는 전구가 한 번도 안 보인다.
 # 아래에서 올려다보는 뷰를 더해 전구와 갓 안쪽을 확인한다.
@@ -84,6 +88,10 @@ cone = builders.prism("LightCone", CONE_R_BOT, CONE_TOP - CONE_BOT, n=16,
                       radius_top=CONE_R_TOP,
                       loc=(0, 0, (CONE_TOP + CONE_BOT) / 2))
 palette.use_lightcone_material(cone)
+# 여기가 특히 중요하다. 셰이더가 **오브젝트 공간** Y 로 세로 그라데이션을 계산하는데,
+# 트랜스폼을 굽지 않으면 로컬 Y 가 ±반높이로 남아 _BottomY/_TopY 와 어긋난다.
+# 그러면 그라데이션이 아래 절반에서 잘려 원뿔이 거의 균일한 밝기가 된다.
+cone = builders.join_all([cone], "LightCone")
 
 preview.render_turnaround("light_cone", [cone])
 export.export_static([cone], paths.art("Environment", "LightCone.fbx"))
@@ -93,8 +101,17 @@ print("EXPORTED LightCone")
 import math  # noqa: E402
 
 _half_angle = math.degrees(math.atan2(CONE_R_BOT, _APEX_Z - CONE_BOT))
+
+# 셰이더는 **오브젝트 공간** Y 를 읽으므로 의도한 값이 아니라 실제 메시를 재서 출력한다.
+# 트랜스폼을 굽지 않으면 여기서 ±반높이가 찍혀 즉시 드러난다.
+_zs = [(cone.matrix_world @ v.co).z for v in cone.data.vertices]
+_local_zs = [v.co.z for v in cone.data.vertices]
+
 print("--- CellRoomBootstrap.cs / ArtMaterialLibrary.cs 에 반영할 값 ---")
 print(f"  BulbY (전구 높이)       : {BULB_Z:.3f}")
 print(f"  spotAngle (전체 각도)   : {_half_angle * 2:.1f}")
-print(f"  _BottomY / _TopY        : {CONE_BOT:.3f} / {CONE_TOP:.3f}")
+print(f"  _BottomY / _TopY        : {min(_local_zs):.3f} / {max(_local_zs):.3f}")
 print(f"  (원뿔 가상 꼭짓점 Z     : {_APEX_Z:.3f} — 전구 높이와 가까울수록 좋다)")
+print(f"  (월드 Z 범위            : {min(_zs):.3f} ~ {max(_zs):.3f})")
+if abs(min(_local_zs) - min(_zs)) > 1e-4:
+    print("  ⚠️ 로컬과 월드가 다르다 = 트랜스폼이 안 구워졌다. join_all 을 거쳐야 한다.")

@@ -116,7 +116,9 @@ namespace NHNAI.EditorTools
             // 눈대중으로 넣지 말 것 — generate_ceiling_lamp.py 가 실행 끝에 출력한다.
             var mat = Ensure(LightCone, "NHNAI/LightCone");
             mat.SetColor("_BaseColor", Color.white);
-            mat.SetFloat("_Intensity", 0.85f);
+            // 아주 낮다. 가산 블렌딩이라 이 정도로도 어둠 위에서는 읽히고,
+            // 세게 주면 흰 고깔 덩어리가 되어 '빛' 이 아니라 '물체' 가 된다.
+            mat.SetFloat("_Intensity", 0.02f);
             mat.SetFloat("_BottomY", 0.02f);
             mat.SetFloat("_TopY", 4.48f);
             mat.SetFloat("_Falloff", 1.1f);
@@ -124,11 +126,11 @@ namespace NHNAI.EditorTools
 
             // 경계 3종. 딱딱해 보이면 여기부터 만진다 — 원인이 서로 달라 효과가 다르다.
             // _DepthFade    바닥·벽과의 교차선 (카메라 requiresDepthTexture 가 켜져 있어야 동작)
-            // _EdgeSoftness 원뿔 실루엣이 사라지는 폭
-            // _RimBoost     테두리 강조. 1.3 은 윤곽이 너무 서서 0.6 으로 낮췄다
+            // _EdgeSoftness 0 = 실루엣을 녹이지 않는다. 고깔 윤곽을 살리는 쪽을 택했다
+            // _RimBoost     0 = 테두리를 따로 밝히지 않는다. 세기가 낮아 강조가 필요 없다
             mat.SetFloat("_DepthFade", 1.2f);
-            mat.SetFloat("_EdgeSoftness", 0.35f);
-            mat.SetFloat("_RimBoost", 0.6f);
+            mat.SetFloat("_EdgeSoftness", 0f);
+            mat.SetFloat("_RimBoost", 0f);
             mat.SetFloat("_RimPower", 3.0f);
             EditorUtility.SetDirty(mat);
         }
