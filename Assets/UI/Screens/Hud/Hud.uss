@@ -1,0 +1,38 @@
+/* HUD — 조준점.
+ *
+ * DESIGN.md 가 아직 없어 토큰이 없다. CLAUDE.md 의 로컬 변수 예외를 따라
+ * 루트 클래스에 --hud-* 로 두고 승격 후보로 표시해 둔다. 리터럴을 여기저기
+ * 흩뿌리면 나중에 토큰으로 올릴 때 어디를 고쳐야 할지 알 수 없다. */
+
+.hud {
+    /* 토큰 승격 후보: 조준점 색 — 흰색이지만 완전한 흰색은 아니다. 전구만 1.0 이어야 한다 */
+    --hud-reticle-color: rgb(226, 226, 226);
+    /* 토큰 승격 후보: 조준점 지름 */
+    --hud-reticle-size: 6px;
+
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 쓸 수 있는 것을 조준했을 때만 보인다. 평소에는 화면에 아무것도 없어야
+   어두운 방을 그냥 바라보는 장면이 방해받지 않는다. */
+.hud__reticle {
+    width: var(--hud-reticle-size);
+    height: var(--hud-reticle-size);
+    border-radius: 3px;
+    background-color: var(--hud-reticle-color);
+
+    opacity: 0;
+    scale: 0.5;
+
+    /* transition 계열은 var() 를 쓰지 않는다 — CLAUDE.md 참조 */
+    transition-property: opacity, scale;
+    transition-duration: 110ms, 110ms;
+    transition-timing-function: ease-out-cubic, ease-out-cubic;
+}
+
+.hud__reticle--active {
+    opacity: 1;
+    scale: 1;
+}

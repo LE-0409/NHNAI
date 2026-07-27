@@ -1,0 +1,16 @@
+{
+    "name": "NHNAI.UI",
+    "rootNamespace": "NHNAI.UI",
+    "references": [
+        "NHNAI.Game"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

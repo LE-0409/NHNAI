@@ -3,9 +3,13 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using NHNAI.Game.Player;
+using NHNAI.Game.Slot;
+using NHNAI.UI.Hud;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UIElements;
 
 namespace NHNAI.EditorTools
 {
@@ -24,6 +28,7 @@ namespace NHNAI.EditorTools
         const string ScenePath = "Assets/Scenes/CellRoom.unity";
         const string ProfilePath = "Assets/Settings/CellRoomVolume.asset";
         const string FbxDir = "Assets/Art/Environment";
+        const string HudUxmlPath = "Assets/UI/Screens/Hud/Hud.uxml";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -86,7 +91,67 @@ namespace NHNAI.EditorTools
 
             // 슬롯머신은 방 한가운데, 전등 바로 아래. 앞면이 +Z 를 본다
             // (ArtPipeline 규약: Blender −Y 전방 → Unity +Z 전방).
-            Place("SlotMachine", root, Vector3.zero, Vector3.zero);
+            var machine = Place("SlotMachine", root, Vector3.zero, Vector3.zero);
+            if (machine != null) WireSlotMachine(machine);
+        }
+
+        /// <summary>
+        /// FBX 계층에서 움직이는 부품을 찾아 컴포넌트를 붙인다.
+        /// 이름은 생성 스크립트가 정한 것이라 어긋나면 조용히 동작하지 않는다 —
+        /// 못 찾으면 에러를 남긴다.
+        /// </summary>
+        static void WireSlotMachine(GameObject machine)
+        {
+            var reels = new Transform[3];
+            for (var i = 0; i < reels.Length; i++)
+            {
+                reels[i] = FindChild(machine.transform, $"Reel_{i}");
+                if (reels[i] == null) Debug.LogError($"[NHNAI] SlotMachine.fbx 에 Reel_{i} 가 없다.");
+            }
+
+            var lever = FindChild(machine.transform, "Lever");
+            if (lever == null)
+            {
+                Debug.LogError("[NHNAI] SlotMachine.fbx 에 Lever 가 없다. 상호작용을 붙이지 못했다.");
+                return;
+            }
+
+            var view = machine.AddComponent<SlotMachineView>();
+            view.Bind(reels, lever);
+
+            // 레이캐스트로 잡으려면 Collider 가 있어야 하고, Interactable 과 **같은
+            // 오브젝트**에 있어야 한다. FBX 임포트는 Collider 를 만들어 주지 않는다.
+            var collider = lever.gameObject.AddComponent<MeshCollider>();
+            collider.convex = true;
+
+            lever.gameObject.AddComponent<SlotMachineLever>().Bind(view);
+
+            BuildReelBacklight(machine.transform);
+        }
+
+        /// <summary>
+        /// 릴 창 안쪽 조명. 발광 머티리얼은 스스로 빛나 보일 뿐 주변을 밝히지 않아서,
+        /// 실제로 릴을 비추려면 광원이 따로 필요하다. 기계가 켜져 있다는 인상이 여기서 나온다.
+        /// </summary>
+        static void BuildReelBacklight(Transform machine)
+        {
+            var go = new GameObject("ReelBacklight_Light");
+            go.transform.SetParent(machine, false);
+            go.transform.localPosition = new Vector3(0f, 1.18f, 0.12f);   // 릴 창 안쪽
+
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = Color.white;
+            light.intensity = 1.6f;
+            light.range = 0.75f;          // 창 밖으로 새어 방을 밝히지 않을 만큼만
+            light.shadows = LightShadows.None;
+        }
+
+        static Transform FindChild(Transform root, string name)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
         }
 
         static GameObject Place(string fbxName, Transform parent, Vector3 pos, Vector3 euler)
@@ -161,7 +226,11 @@ namespace NHNAI.EditorTools
             go.tag = "MainCamera";
             // 슬롯머신(원점)에서 뒤로 물러나 정면을 본다. 이 위치는 빛 원뿔 **바깥**이다 —
             // 어둠 속에 서서 밝은 기계를 바라보는 그림이라야 고깔이 고깔로 보인다.
-            go.transform.position = new Vector3(0f, EyeHeight, RoomSize * 0.32f);
+            //
+            // 아직 이동이 없으므로 여기서 레버에 손이 닿아야 한다. 더 물러나면
+            // 레버까지 거리가 PlayerInteractor.reach 를 넘어 조준해도 아무 일이 없다.
+            // 이동이 붙으면 다시 물려도 된다.
+            go.transform.position = new Vector3(0f, EyeHeight, RoomSize * 0.20f);
             go.transform.rotation = Quaternion.Euler(6f, 180f, 0f);
 
             var cam = go.AddComponent<Camera>();
@@ -184,7 +253,30 @@ namespace NHNAI.EditorTools
 
             go.AddComponent<AudioListener>();
             // 마우스 시점. 시작 각도는 위에서 준 Transform 을 그대로 이어받는다.
-            go.AddComponent<NHNAI.Game.Player.PlayerLook>();
+            go.AddComponent<PlayerLook>();
+
+            // 화면 중앙 조준 + 클릭. HUD 가 이 컴포넌트를 구독한다.
+            var interactor = go.AddComponent<PlayerInteractor>();
+            BuildHud(interactor);
+        }
+
+        // --- HUD --------------------------------------------------------------
+
+        static void BuildHud(PlayerInteractor interactor)
+        {
+            var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudUxmlPath);
+            if (uxml == null)
+            {
+                Debug.LogError($"[NHNAI] HUD UXML 이 없다: {HudUxmlPath}");
+                return;
+            }
+
+            var go = new GameObject("Hud");
+            var doc = go.AddComponent<UIDocument>();
+            doc.panelSettings = UiBootstrap.Build();
+            doc.visualTreeAsset = uxml;
+
+            go.AddComponent<HudScreen>().Bind(interactor);
         }
 
         // --- 포스트 프로세싱 --------------------------------------------------

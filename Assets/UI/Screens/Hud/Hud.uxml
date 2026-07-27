@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:engine="UnityEngine.UIElements">
+    <!-- 조준점 하나뿐인 HUD. 3D 화면을 덮으므로 배경을 칠하지 않고,
+         picking-mode 를 Ignore 로 두어 마우스 입력을 가로채지 않는다. -->
+    <Style src="project://database/Assets/UI/Screens/Hud/Hud.uss" />
+
+    <engine:VisualElement name="hud-root" class="hud" picking-mode="Ignore">
+        <engine:VisualElement name="reticle" class="hud__reticle" picking-mode="Ignore" />
+    </engine:VisualElement>
+</engine:UXML>

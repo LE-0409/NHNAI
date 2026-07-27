@@ -510,7 +510,8 @@ cd ArtPipeline
 
 ```
 NHNAI > Setup  > 1. 아트 머티리얼 생성 · 갱신   ← 머티리얼만 다시 만든다
-NHNAI > Scenes > 독방 (CellRoom)                ← 머티리얼까지 만들고 씬을 새로 만든다
+NHNAI > Setup  > 2. PanelSettings 생성 · 갱신   ← UI Toolkit 런타임 기반
+NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘을 포함해 씬을 통째로 새로 만든다
 ```
 
 씬을 만들면 `EditorBuildSettings`에 **자동으로 등록**된다.
