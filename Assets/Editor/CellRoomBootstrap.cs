@@ -36,7 +36,20 @@ namespace NHNAI.EditorTools
         const float BulbY = 4.526f;     // 전구 높이 (generate_ceiling_lamp.py 의 BULB_Z)
         const float ConeAngle = 42.8f;  // 빛 원뿔 메시의 전체 벌어짐 각도
 
-        const float EyeHeight = 1.62f;
+        /// <summary>
+        /// 시점 높이(m). **시점을 조절하는 정식 손잡이는 여기다.**
+        ///
+        /// CharacterController 의 Center 로도 시점을 내릴 수 있지만 그건 캡슐을 통째로
+        /// 들어 올려 Transform 원점을 바닥 아래로 잠기게 하는 것이라, 원점이 곧 발밑이라는
+        /// 전제가 깨진다. 지금은 티가 안 나도 발소리·스폰·바닥 판정이 걸리기 시작한다.
+        ///
+        /// 1.25 는 성인 눈높이(약 1.6)보다 낮다. 의도한 값이다 — 슬롯머신(1.72 m)을
+        /// 살짝 올려다보게 되어 기계가 사람을 내려다보는 구도가 된다.
+        /// </summary>
+        const float EyeHeight = 1.25f;
+
+        /// <summary>충돌 캡슐 높이. 눈높이보다 조금 크면 된다 (머리끝 여유).</summary>
+        const float BodyHeight = 1.40f;
 
         /// <summary>
         /// 바닥 광원 웅덩이 가장자리의 부드러움. 스포트라이트는 innerSpotAngle 부터
@@ -147,8 +160,19 @@ namespace NHNAI.EditorTools
 
             // 레이캐스트로 잡으려면 Collider 가 있어야 하고, Interactable 과 **같은
             // 오브젝트**에 있어야 한다. FBX 임포트는 Collider 를 만들어 주지 않는다.
-            var collider = lever.gameObject.AddComponent<MeshCollider>();
-            collider.convex = true;
+            //
+            // 메시 모양 그대로 감싸지 않고 넉넉한 캡슐을 씌운다. 레버 팔은 반경 0.016 m 라
+            // 실루엣대로 잡으면 조준이 바늘구멍이 된다. 조준 판정은 보이는 모양이 아니라
+            // '노리기 쉬운 크기' 로 잡는 게 맞다.
+            //
+            // 캡슐은 레버 로컬 +Y 를 따라 선다 — 팔이 위로 뻗고 뒤(−Z)로 조금 눕는다.
+            // 캐비닛 앞면(z=+0.26)이 이 캡슐보다 플레이어에 가까워서, 앞에서 캐비닛을
+            // 조준했을 때 레버가 잘못 잡히지는 않는다.
+            var capsule = lever.gameObject.AddComponent<CapsuleCollider>();
+            capsule.direction = 1;                                   // Y 축
+            capsule.height = 0.42f;
+            capsule.radius = 0.09f;
+            capsule.center = new Vector3(0.01f, 0.15f, -0.05f);
 
             lever.gameObject.AddComponent<SlotMachineLever>().Bind(view);
 
@@ -258,9 +282,10 @@ namespace NHNAI.EditorTools
             body.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
 
             var controller = body.AddComponent<CharacterController>();
-            controller.height = 1.75f;
+            controller.height = BodyHeight;
             controller.radius = 0.28f;
-            // 캡슐 바닥이 원점에 오게 해 Transform 의 Y 가 곧 발밑 높이가 되도록 한다.
+            // ⚠️ 이 식을 깨지 않는다. 캡슐 바닥이 원점에 와야 Transform 의 Y 가 곧
+            // 발밑 높이다. 시점을 낮추고 싶으면 여기가 아니라 EyeHeight 를 만진다.
             controller.center = new Vector3(0f, controller.height / 2f, 0f);
             controller.slopeLimit = 45f;
             controller.stepOffset = 0.3f;
@@ -271,8 +296,9 @@ namespace NHNAI.EditorTools
             go.tag = "MainCamera";
             go.transform.SetParent(body.transform, false);
             go.transform.localPosition = new Vector3(0f, EyeHeight, 0f);
-            // 6도 숙인다. 기계와 거리가 가까워 정면을 보면 하단이 화면 밖으로 나간다.
-            go.transform.localRotation = Quaternion.Euler(6f, 0f, 0f);
+            // 숙이지 않는다. 눈높이 1.25 면 릴 창(1.03~1.33)이 거의 정면에 온다 —
+            // 눈이 높았을 때는 숙여야 기계 하단이 들어왔지만 이제는 그럴 필요가 없다.
+            go.transform.localRotation = Quaternion.identity;
 
             var cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;

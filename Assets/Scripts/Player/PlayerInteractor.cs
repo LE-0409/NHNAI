@@ -15,7 +15,7 @@ namespace NHNAI.Game.Player
     public sealed class PlayerInteractor : MonoBehaviour
     {
         [Tooltip("손이 닿는 거리(m). 이보다 멀면 조준점이 뜨지 않는다")]
-        [SerializeField] float reach = 2.6f;
+        [SerializeField] float reach = 3.6f;
 
         [Tooltip("조준 판정에 쓸 레이어. 기본은 전부")]
         [SerializeField] LayerMask mask = ~0;

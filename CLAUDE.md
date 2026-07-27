@@ -530,6 +530,14 @@ NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘을 포함해 씬�
 넘었거나 그 오브젝트에 `Collider` 가 없는 것이다 — `Interactable` 과 `Collider` 는
 **같은 오브젝트**에 있어야 한다.
 
+조준용 Collider 는 **보이는 모양대로 감싸지 않는다.** 레버 팔처럼 가는 것은 실루엣대로
+잡으면 조준이 바늘구멍이 된다. 노리기 쉬운 크기의 캡슐·박스를 씌운다.
+
+⚠️ **시점 높이는 `CellRoomBootstrap.EyeHeight` 로 바꾼다.** `CharacterController` 의
+`Center` 를 올려도 시점이 내려가지만, 그건 캡슐을 통째로 들어 올려 Transform 원점을
+바닥 아래로 잠기게 하는 것이라 **원점 = 발밑**이라는 전제가 깨진다. 당장은 티가 안 나도
+발소리·스폰·바닥 판정이 걸리기 시작한다. `center = height / 2` 식은 건드리지 않는다.
+
 ⚠️ **씬에서 직접 만진 것은 다음 생성 때 전부 날아간다.** `.unity`·`.mat`·`VolumeProfile.asset`은
 GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로 만든다 — 그래서 정본은 씬이
 아니라 `Assets/Editor/CellRoomBootstrap.cs`다. 조명·카메라·포스트 프로세싱 값을 바꾸려면

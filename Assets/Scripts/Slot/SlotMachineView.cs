@@ -21,7 +21,7 @@ namespace NHNAI.Game.Slot
 
         [Header("레버 연출")]
         [Tooltip("당겼을 때 레버가 도는 각도(도, 로컬 X). 반대로 꺾이면 부호를 뒤집는다")]
-        [SerializeField] float leverPullAngle = -62f;
+        [SerializeField] float leverPullAngle = 62f;
         [SerializeField] float leverDownTime = 0.12f;
         [SerializeField] float leverHoldTime = 0.06f;
         [SerializeField] float leverReturnTime = 0.45f;
