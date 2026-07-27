@@ -121,7 +121,14 @@ namespace NHNAI.EditorTools
             mat.SetFloat("_TopY", 4.48f);
             mat.SetFloat("_Falloff", 1.1f);
             mat.SetFloat("_BottomFade", 0.35f);
-            mat.SetFloat("_RimBoost", 1.3f);
+
+            // 경계 3종. 딱딱해 보이면 여기부터 만진다 — 원인이 서로 달라 효과가 다르다.
+            // _DepthFade    바닥·벽과의 교차선 (카메라 requiresDepthTexture 가 켜져 있어야 동작)
+            // _EdgeSoftness 원뿔 실루엣이 사라지는 폭
+            // _RimBoost     테두리 강조. 1.3 은 윤곽이 너무 서서 0.6 으로 낮췄다
+            mat.SetFloat("_DepthFade", 1.2f);
+            mat.SetFloat("_EdgeSoftness", 0.35f);
+            mat.SetFloat("_RimBoost", 0.6f);
             mat.SetFloat("_RimPower", 3.0f);
             EditorUtility.SetDirty(mat);
         }

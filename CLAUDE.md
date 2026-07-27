@@ -535,6 +535,17 @@ GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로
 | 앤틱한 톤 (대비·입자·비네트) | `BuildPostProcessing()` |
 | 빛 기둥의 룩 | `M_LightCone` 파라미터 → 확정되면 `ArtMaterialLibrary.CreateLightCone()` |
 
+빛의 **경계**가 어색할 때는 원인이 셋이라 만지는 곳이 다르다. 눈으로 어느 경계인지 먼저 가린다.
+
+| 어떤 경계가 어색한가 | 만지는 곳 |
+|---|---|
+| 빛 기둥이 바닥·벽을 뚫고 지나가며 생긴 **직선 교차선** | `M_LightCone` 의 `_DepthFade` (크게 = 더 흐림, 0 = 끔) |
+| 빛 기둥의 **옆면 윤곽**이 칼로 자른 듯함 | `_EdgeSoftness` (크게 = 뭉근함), `_RimBoost` (작게 = 윤곽 약함) |
+| 바닥에 생긴 **광원 웅덩이의 원 테두리** | `CellRoomBootstrap.SpotEdgeSoftness` (작게 = 넓게 번짐) |
+
+`_DepthFade` 는 카메라의 `requiresDepthTexture` 가 켜져 있어야 동작한다.
+꺼지면 조용히 효과만 사라지므로, 교차선이 다시 나타나면 여기부터 확인한다.
+
 ### 디버깅 도구
 
 | 문제 | 도구 |

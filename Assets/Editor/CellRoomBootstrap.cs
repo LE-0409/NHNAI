@@ -33,6 +33,13 @@ namespace NHNAI.EditorTools
 
         const float EyeHeight = 1.62f;
 
+        /// <summary>
+        /// 바닥 광원 웅덩이 가장자리의 부드러움. 스포트라이트는 innerSpotAngle 부터
+        /// spotAngle 까지 걸쳐 감쇠하므로, 이 비율이 낮을수록 번지는 구간이 넓어진다.
+        /// 1 에 가까우면 칼로 자른 원이 된다.
+        /// </summary>
+        const float SpotEdgeSoftness = 0.25f;
+
         [MenuItem("NHNAI/Scenes/독방 (CellRoom)", priority = 20)]
         public static void Create()
         {
@@ -120,7 +127,7 @@ namespace NHNAI.EditorTools
             light.range = 12f;
             // 빛 원뿔 **메시**의 벌어짐과 같은 각도여야 빛과 기둥이 따로 놀지 않는다.
             light.spotAngle = ConeAngle;
-            light.innerSpotAngle = ConeAngle * 0.45f;
+            light.innerSpotAngle = ConeAngle * SpotEdgeSoftness;
             light.shadows = LightShadows.Soft;
             light.shadowStrength = 1f;
             light.shadowBias = 0.02f;
@@ -171,6 +178,9 @@ namespace NHNAI.EditorTools
             data.renderPostProcessing = true;
             data.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             data.antialiasingQuality = AntialiasingQuality.High;
+            // LightCone 셰이더의 _DepthFade 가 이걸 읽는다. 끄면 빛 기둥이 바닥·벽을
+            // 관통하며 딱딱한 교차선을 남긴다.
+            data.requiresDepthTexture = true;
 
             go.AddComponent<AudioListener>();
             // 마우스 시점. 시작 각도는 위에서 준 Transform 을 그대로 이어받는다.
