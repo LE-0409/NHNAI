@@ -494,24 +494,49 @@ cd ArtPipeline
 
 ## 실행 · 검증
 
-씬 생성 메뉴와 테스트 씬은 아직 없다. `Assets/Editor/UiBootstrap.cs`를 만들 때 함께 붙인다.
-씬을 만들면 `EditorBuildSettings`에도 자동으로 등록되게 하고,
+### 씬 생성 메뉴
+
+```
+NHNAI > Setup  > 1. 아트 머티리얼 생성 · 갱신   ← 머티리얼만 다시 만든다
+NHNAI > Scenes > 독방 (CellRoom)                ← 머티리얼까지 만들고 씬을 새로 만든다
+```
+
+씬을 만들면 `EditorBuildSettings`에 **자동으로 등록**된다.
 `ProjectSettings/EditorBuildSettings.asset`은 손으로 고치지 않는다.
 
-### 브라우저 프로토타입
+⚠️ **씬에서 직접 만진 것은 다음 생성 때 전부 날아간다.** `.unity`·`.mat`·`VolumeProfile.asset`은
+GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로 만든다 — 그래서 정본은 씬이
+아니라 `Assets/Editor/CellRoomBootstrap.cs`다. 조명·카메라·포스트 프로세싱 값을 바꾸려면
+그 파일을 고치고 메뉴를 다시 실행한다.
 
-`prototype/{화면}.html`을 브라우저로 직접 연다. 같은 값·같은 수식이라 Unity와 화면이
-일치해야 한다. 일치하지 않으면 **어느 쪽이 틀렸는지 먼저 특정**하고 고친다.
+인스펙터에서 값을 굴려 보며 찾는 것 자체는 정상적인 작업 방식이다. **찾은 값을
+부트스트랩에 옮겨 적고 메뉴를 다시 돌려 확정한다.** 씬에만 남기면 다음 생성에서 사라진다.
+
+### 룩을 조정할 때 어디를 만지나
+
+| 바꾸고 싶은 것 | 만지는 곳 |
+|---|---|
+| 방·기계의 형태·치수 | `ArtPipeline/assets/*/generate_*.py` → 다시 돌린다 |
+| 표면 밝기 (어떤 부품이 몇 번 명도인가) | 같은 생성 스크립트의 `color=` 인자. **팔레트 순서는 건드리지 않는다** |
+| 빛의 세기·퍼짐·그림자 | `CellRoomBootstrap.BuildLighting()` |
+| 어둠의 깊이 (벽이 얼마나 녹는가) | `ConfigureRenderSettings()` 의 `fogDensity`·`ambientLight` |
+| 앤틱한 톤 (대비·입자·비네트) | `BuildPostProcessing()` |
+| 빛 기둥의 룩 | `M_LightCone` 파라미터 → 확정되면 `ArtMaterialLibrary.CreateLightCone()` |
 
 ### 디버깅 도구
 
 | 문제 | 도구 |
 |---|---|
-| 요소가 안 보임 / 스타일이 안 먹음 | Window > UI Toolkit > Debugger |
+| 화면이 새까맣거나 너무 밝음 | Window > Rendering > Lighting, 그리고 Volume 프로파일 |
+| 머티리얼이 분홍색 | 셰이더 컴파일 실패. Console 에서 `NHNAI/LightCone` 오류부터 본다 |
+| FBX 색이 마젠타 | 팔레트 UV 가 미할당 셀을 가리킨다 — 생성 스크립트의 `color=` 이름 오타 |
+| FBX 가 회색 단색 | 머티리얼 리맵 실패. `NHNAI > Setup > 1` 을 다시 돌린다 |
+| 멀리서 색이 번짐 | 팔레트 텍스처의 밉맵·압축이 켜졌다. `ArtMaterialLibrary` 가 끄는데 수동으로 되돌린 것 |
 | 드로우 콜이 많음 | Frame Debugger |
 | 프레임 저하 | Unity Profiler |
+| UI 요소가 안 보임 / 스타일이 안 먹음 | Window > UI Toolkit > Debugger |
 
-**"스타일이 안 먹는다"의 1순위 원인은 컴포넌트 USS를 `GameTheme.tss`에 등록하지 않은 것이다.**
+**UI 쪽 "스타일이 안 먹는다"의 1순위 원인은 컴포넌트 USS를 `GameTheme.tss`에 등록하지 않은 것이다.**
 
 ---
 
