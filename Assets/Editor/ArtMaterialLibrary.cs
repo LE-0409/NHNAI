@@ -135,13 +135,19 @@ namespace NHNAI.EditorTools
             EditorUtility.SetDirty(mat);
         }
 
-        /// <summary>URP/Lit 을 반투명으로 바꾼다. 셰이더 키워드와 렌더 큐를 같이 건드려야 실제로 반영된다.</summary>
+        /// <summary>
+        /// URP/Lit 을 반투명으로 바꾼다. 셰이더 키워드와 렌더 큐를 같이 건드려야 실제로 반영된다.
+        ///
+        /// ⚠️ _SrcBlend · _DstBlend 는 **건드리지 않는다.** URP 는 반투명 Lit 을
+        /// 프리멀티플라이드 알파로 다뤄서, 여기서 SrcAlpha 를 넣어도 머티리얼 검증이
+        /// One 으로 되돌린다. 그러면 .mat 값이 코드와 계속 어긋나 커밋할 때마다 diff 가 뜨고,
+        /// 무엇보다 키워드는 프리멀티플라이드인데 계수만 스트레이트 알파가 되어
+        /// 실제 합성이 틀어진다. 상위 속성만 정하고 파생값은 URP 가 계산하게 둔다.
+        /// </summary>
         static void MakeTransparent(Material mat)
         {
             mat.SetFloat("_Surface", 1f);      // 0 = Opaque, 1 = Transparent
             mat.SetFloat("_Blend", 0f);        // Alpha
-            mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-            mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
             mat.SetFloat("_ZWrite", 0f);
             mat.SetFloat("_AlphaClip", 0f);
             mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
