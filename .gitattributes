@@ -1,0 +1,9 @@
+# 훅은 sh 로 실행된다. CRLF 가 섞이면 shebang(#!/bin/sh\r)이 깨져 훅이 통째로 죽는다.
+# 그래서 훅과 셸 스크립트만 LF 로 고정한다.
+#
+# 저장소 전체에 text=auto 를 걸지 않는 이유:
+# Unity 의 .unity / .asset / .meta 는 YAML 이고 Unity 가 직접 쓰기 때문에
+# 정규화를 끼우면 불필요한 diff 와 병합 충돌이 생긴다.
+
+.githooks/** text eol=lf
+*.sh        text eol=lf

@@ -1,0 +1,75 @@
+#!/bin/sh
+#
+# commit-msg — 커밋 메시지가 Conventional Commits 규칙을 따르는지 검사한다.
+#
+# 활성화 (클론 후 1회):
+#   git config core.hooksPath .githooks
+#
+# 통째로 건너뛰기 (권장하지 않음):
+#   git commit --no-verify
+#
+# 규칙을 바꾸려면 아래 TYPES / SCOPES 와 .gitmessage, CLAUDE.md 를 같이 고친다.
+
+MSG_FILE="$1"
+
+TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+SUBJECT_MAX=72
+
+# 주석(#)과 빈 줄을 걷어낸 첫 줄이 제목이다
+SUBJECT=$(grep -v '^#' "$MSG_FILE" | sed '/^[[:space:]]*$/d' | head -n 1)
+
+if [ -z "$SUBJECT" ]; then
+    echo "커밋 메시지가 비어 있다." >&2
+    exit 1
+fi
+
+# git 이 자동으로 만드는 메시지는 통과시킨다
+case "$SUBJECT" in
+    "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*)
+        exit 0
+        ;;
+esac
+
+if ! printf '%s' "$SUBJECT" | grep -Eq "^($TYPES)(\([a-z0-9-]+\))?!?: .+"; then
+    cat >&2 <<EOF
+
+✖ 커밋 메시지 형식이 맞지 않는다.
+
+  받은 값:  $SUBJECT
+  기대 형식: <type>(<scope>): <제목>
+
+  type (필수)
+    feat      새 기능
+    fix       버그 수정
+    docs      문서만 (CLAUDE.md, DESIGN.md, README)
+    style     서식만 — 동작·외형 변화 없음
+    refactor  기능 변화 없는 구조 개선
+    perf      성능 개선
+    test      테스트 추가·수정
+    build     빌드·패키지·에셋 파이프라인 (manifest.json, asmdef, PanelSettings)
+    ci        CI 설정
+    chore     그 외 잡무
+    revert    되돌리기
+
+  scope (선택, 소문자·숫자·하이픈)
+    theme  ui  screen  game  editor  prototype  unity
+
+  예시
+    feat(screen): 메인 메뉴 진입 애니메이션 추가
+    fix(ui): 호버 시 z-order 복구 실패 수정
+    docs(theme): 토큰 출처 표기 보강
+    feat(theme)!: 토큰 이름을 signal 계열로 변경
+
+  파괴적 변경은 type 뒤에 ! 를 붙인다.
+
+EOF
+    exit 1
+fi
+
+# 제목 길이는 경고만 한다 (환경에 따라 한글 카운트가 달라져 차단하지 않는다)
+LEN=$(printf '%s' "$SUBJECT" | wc -m | tr -d ' ')
+if [ "$LEN" -gt "$SUBJECT_MAX" ]; then
+    echo "⚠ 제목이 ${LEN}자다. ${SUBJECT_MAX}자 이내를 권장한다." >&2
+fi
+
+exit 0

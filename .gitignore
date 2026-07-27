@@ -98,6 +98,4 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
-# toss
-ait-build/
-node_modules/
+# prototype/ 은 소스이므로 커밋한다. 빌드 산출물이 생기면 여기에 추가한다.

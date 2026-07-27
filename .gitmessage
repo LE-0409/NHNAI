@@ -1,0 +1,37 @@
+
+# <type>(<scope>): <제목>
+#
+# ── type (필수) ─────────────────────────────────────────────
+#   feat      새 기능
+#   fix       버그 수정
+#   docs      문서만 (CLAUDE.md, DESIGN.md, README)
+#   style     서식만 — 동작·외형 변화 없음
+#   refactor  기능 변화 없는 구조 개선
+#   perf      성능 개선
+#   test      테스트 추가·수정
+#   build     빌드·패키지·에셋 파이프라인 (manifest.json, asmdef, PanelSettings)
+#   ci        CI 설정
+#   chore     그 외 잡무
+#   revert    되돌리기
+#
+# ── scope (선택) ────────────────────────────────────────────
+#   theme      디자인 토큰 (DESIGN.md, tokens.uss, tokens.css)
+#   ui         UI Toolkit 공통 (base.uss, GameTheme.tss)
+#   screen     화면 (Assets/UI/Screens/)
+#   game       게임 로직 (NHNAI.Game)
+#   editor     에디터 툴 (Assets/Editor/)
+#   prototype  HTML 프로토타입 (prototype/)
+#   unity      프로젝트 설정·패키지 (ProjectSettings, manifest.json, asmdef)
+#
+# ── 규칙 ────────────────────────────────────────────────────
+#   · 제목은 한국어. 마침표 없이. 72자 이내.
+#   · 파괴적 변경은 type 뒤에 ! →  feat(theme)!: 토큰 이름 변경
+#   · 본문은 한 줄 띄우고 쓴다. "무엇"보다 "왜"를 남긴다.
+#   · 토큰을 바꾼 커밋은 DESIGN.md / tokens.uss / tokens.css 세 파일을 함께 담는다.
+#
+# ── 예시 ────────────────────────────────────────────────────
+#   feat(screen): 메인 메뉴 진입 애니메이션 추가
+#   fix(ui): 호버 시 z-order 복구 실패 수정
+#   docs(theme): 토큰 출처 표기 보강
+#   build(unity): PanelSettings 참조 누락 검증 추가
+#   chore: 사용하지 않는 임시 파일 정리
