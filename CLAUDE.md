@@ -517,6 +517,19 @@ NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘을 포함해 씬�
 씬을 만들면 `EditorBuildSettings`에 **자동으로 등록**된다.
 `ProjectSettings/EditorBuildSettings.asset`은 손으로 고치지 않는다.
 
+### 조작
+
+| 입력 | 동작 |
+|---|---|
+| 마우스 | 시야. **좌우는 몸통(`Player`)이, 상하는 카메라가** 돈다 |
+| WASD · 방향키 | 걷기. 몸통 정면 기준이다 |
+| 좌클릭 | 조준한 것과 상호작용 (커서가 잠긴 상태에서만) |
+| Esc | 커서 해제. 다시 클릭하면 잠긴다 |
+
+조준점은 **쓸 수 있는 것을 볼 때만** 뜬다. 안 뜨면 거리가 `PlayerInteractor.reach` 를
+넘었거나 그 오브젝트에 `Collider` 가 없는 것이다 — `Interactable` 과 `Collider` 는
+**같은 오브젝트**에 있어야 한다.
+
 ⚠️ **씬에서 직접 만진 것은 다음 생성 때 전부 날아간다.** `.unity`·`.mat`·`VolumeProfile.asset`은
 GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로 만든다 — 그래서 정본은 씬이
 아니라 `Assets/Editor/CellRoomBootstrap.cs`다. 조명·카메라·포스트 프로세싱 값을 바꾸려면

@@ -75,7 +75,10 @@ namespace NHNAI.EditorTools
             var root = new GameObject("Environment").transform;
 
             // 방 · 전등 · 빛 원뿔은 생성 스크립트가 방 좌표계로 뽑았으므로 원점에 그대로 둔다.
-            Place("CellRoom", root, Vector3.zero, Vector3.zero);
+            var room = Place("CellRoom", root, Vector3.zero, Vector3.zero);
+            // 콜라이더가 없으면 벽을 통과하고 바닥으로 떨어진다. FBX 임포트는 만들어 주지 않는다.
+            if (room != null) AddMeshColliders(room);
+
             Place("CeilingLamp", root, Vector3.zero, Vector3.zero);
 
             var cone = Place("LightCone", root, Vector3.zero, Vector3.zero);
@@ -92,7 +95,30 @@ namespace NHNAI.EditorTools
             // 슬롯머신은 방 한가운데, 전등 바로 아래. 앞면이 +Z 를 본다
             // (ArtPipeline 규약: Blender −Y 전방 → Unity +Z 전방).
             var machine = Place("SlotMachine", root, Vector3.zero, Vector3.zero);
-            if (machine != null) WireSlotMachine(machine);
+            if (machine != null)
+            {
+                // 캐비닛만 막는다. 릴은 창 안이라 닿을 일이 없고, 유리·백라이트에 콜라이더를
+                // 붙이면 레버를 조준할 때 앞을 가로막는다. 레버는 아래에서 따로 붙인다.
+                AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
+                                 "Lever", "ReelGlass", "ReelBacklight");
+                WireSlotMachine(machine);
+            }
+        }
+
+        /// <summary>
+        /// 메시가 있는 자식마다 MeshCollider 를 붙인다. 이름이 <paramref name="skip"/> 에
+        /// 있으면 건너뛴다. 정적 지오메트리라 convex 로 만들지 않는다 — 방처럼 오목한
+        /// 모양을 convex 로 감싸면 속이 꽉 찬 덩어리가 되어 안으로 들어갈 수 없다.
+        /// </summary>
+        static void AddMeshColliders(GameObject root, params string[] skip)
+        {
+            foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null) continue;
+                if (System.Array.IndexOf(skip, filter.gameObject.name) >= 0) continue;
+                if (filter.GetComponent<Collider>() != null) continue;
+                filter.gameObject.AddComponent<MeshCollider>();
+            }
         }
 
         /// <summary>
@@ -221,17 +247,32 @@ namespace NHNAI.EditorTools
 
         static void BuildCamera()
         {
-            // 1인칭. 플레이어는 자신을 볼 수 없다 — 손도 팔도 없어서 카메라가 곧 플레이어다.
-            var go = new GameObject("PlayerCamera");
-            go.tag = "MainCamera";
+            // 1인칭. 플레이어는 자신을 볼 수 없어서 보이는 몸은 없지만, 걷고 부딪히려면
+            // 충돌체가 필요하다. **몸통이 좌우(yaw)를 맡고 카메라가 상하(pitch)를 맡는다** —
+            // 카메라만 돌리면 앞으로 걸을 때 보는 방향과 다른 데로 간다.
+            var body = new GameObject("Player");
             // 슬롯머신(원점)에서 뒤로 물러나 정면을 본다. 이 위치는 빛 원뿔 **바깥**이다 —
             // 어둠 속에 서서 밝은 기계를 바라보는 그림이라야 고깔이 고깔로 보인다.
-            //
-            // 아직 이동이 없으므로 여기서 레버에 손이 닿아야 한다. 더 물러나면
-            // 레버까지 거리가 PlayerInteractor.reach 를 넘어 조준해도 아무 일이 없다.
-            // 이동이 붙으면 다시 물려도 된다.
-            go.transform.position = new Vector3(0f, EyeHeight, RoomSize * 0.20f);
-            go.transform.rotation = Quaternion.Euler(6f, 180f, 0f);
+            // 바닥에 살짝 띄워 시작한다. 정확히 0 이면 첫 프레임에 바닥을 파고든 판정이 난다.
+            body.transform.position = new Vector3(0f, 0.05f, RoomSize * 0.20f);
+            body.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+
+            var controller = body.AddComponent<CharacterController>();
+            controller.height = 1.75f;
+            controller.radius = 0.28f;
+            // 캡슐 바닥이 원점에 오게 해 Transform 의 Y 가 곧 발밑 높이가 되도록 한다.
+            controller.center = new Vector3(0f, controller.height / 2f, 0f);
+            controller.slopeLimit = 45f;
+            controller.stepOffset = 0.3f;
+
+            body.AddComponent<PlayerMove>();
+
+            var go = new GameObject("PlayerCamera");
+            go.tag = "MainCamera";
+            go.transform.SetParent(body.transform, false);
+            go.transform.localPosition = new Vector3(0f, EyeHeight, 0f);
+            // 6도 숙인다. 기계와 거리가 가까워 정면을 보면 하단이 화면 밖으로 나간다.
+            go.transform.localRotation = Quaternion.Euler(6f, 0f, 0f);
 
             var cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
@@ -252,8 +293,8 @@ namespace NHNAI.EditorTools
             data.requiresDepthTexture = true;
 
             go.AddComponent<AudioListener>();
-            // 마우스 시점. 시작 각도는 위에서 준 Transform 을 그대로 이어받는다.
-            go.AddComponent<PlayerLook>();
+            // 마우스 시점. 좌우는 몸통에, 상하는 카메라에 건다.
+            go.AddComponent<PlayerLook>().Bind(body.transform);
 
             // 화면 중앙 조준 + 클릭. HUD 가 이 컴포넌트를 구독한다.
             var interactor = go.AddComponent<PlayerInteractor>();

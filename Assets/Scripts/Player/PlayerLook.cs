@@ -4,11 +4,14 @@ using UnityEngine.InputSystem;
 namespace NHNAI.Game.Player
 {
     /// <summary>
-    /// 마우스로 시야를 돌린다. 1인칭이고 플레이어는 자신을 볼 수 없어서 카메라가 곧 플레이어다.
+    /// 마우스로 시야를 돌린다. 1인칭이고 플레이어는 자신을 볼 수 없어서 카메라가 곧 시선이다.
     ///
-    /// 지금은 yaw·pitch 를 둘 다 카메라에 건다. 이동이 붙으면 **yaw 는 몸통(부모)으로 옮기고
-    /// 여기는 pitch 만 남긴다** — 몸이 생기면 좌우 회전은 몸이 돌아야 이동 방향과 맞는다.
-    /// 그때 <see cref="pitchOnly"/> 를 켜면 된다.
+    /// **좌우(yaw)는 몸통이 돌고 상하(pitch)는 카메라가 돈다.** 몸이 돌아야 이동 방향이
+    /// 보는 방향과 맞는다 — 카메라만 돌리면 앞으로 걸을 때 엉뚱한 데로 간다.
+    /// <see cref="yawTarget"/> 이 비어 있으면 자기 자신에 yaw 를 걸어, 몸통이 없을 때도 동작한다.
+    ///
+    /// 마우스를 읽는 곳은 여기 한 군데다. 이동 스크립트가 따로 읽으면 같은 델타를 두 번
+    /// 소비하게 되고, 감도 설정이 두 곳으로 갈라진다.
     ///
     /// 입력은 Input System 의 저수준 API(<see cref="Mouse.current"/>)를 직접 읽는다.
     /// InputActionAsset 을 문자열로 찾는 방식은 이름이 어긋나도 컴파일이 통과하고
@@ -26,8 +29,8 @@ namespace NHNAI.Game.Player
         [SerializeField] float pitchMax = 85f;
 
         [Header("동작")]
-        [Tooltip("켜면 좌우 회전을 하지 않는다. 이동이 붙어 yaw 를 몸통이 맡을 때 켠다")]
-        [SerializeField] bool pitchOnly;
+        [Tooltip("좌우 회전을 걸 몸통. 비우면 카메라 자신이 좌우까지 돈다")]
+        [SerializeField] Transform yawTarget;
 
         [Tooltip("시작할 때 커서를 잠근다. Esc 로 풀고 클릭으로 다시 잠근다")]
         [SerializeField] bool lockCursorOnStart = true;
@@ -35,13 +38,14 @@ namespace NHNAI.Game.Player
         float _yaw;
         float _pitch;
 
+        Transform Yaw => yawTarget != null ? yawTarget : transform;
+
         void OnEnable()
         {
             // 씬에 배치된 초기 각도를 이어받는다. 0 으로 리셋하면 부트스트랩이 맞춰 둔
             // 시작 시선(슬롯머신을 바라보는 방향)이 첫 프레임에 날아간다.
-            var euler = transform.eulerAngles;
-            _yaw = euler.y;
-            _pitch = SignedAngle(euler.x);
+            _yaw = Yaw.eulerAngles.y;
+            _pitch = SignedAngle(transform.localEulerAngles.x);
 
             if (lockCursorOnStart) SetCursorLocked(true);
         }
@@ -70,14 +74,21 @@ namespace NHNAI.Game.Player
             // 달라진다 — 흔하고 눈치채기 어려운 버그다.
             var delta = mouse.delta.ReadValue();
 
-            if (!pitchOnly) _yaw += delta.x * sensitivity;
+            _yaw += delta.x * sensitivity;
             _pitch = Mathf.Clamp(_pitch - delta.y * sensitivity, pitchMin, pitchMax);
 
             // 누적 회전(transform.Rotate)이 아니라 매 프레임 각도로 다시 만든다.
             // 누적하면 부동소수 오차가 쌓여 roll 이 생기고 수평선이 기운다.
-            transform.localRotation = pitchOnly
-                ? Quaternion.Euler(_pitch, 0f, 0f)
-                : Quaternion.Euler(_pitch, _yaw, 0f);
+            var yaw = Yaw;
+            if (yaw == transform)
+            {
+                transform.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
+            }
+            else
+            {
+                yaw.rotation = Quaternion.Euler(0f, _yaw, 0f);
+                transform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+            }
         }
 
         static void SetCursorLocked(bool locked)
@@ -85,6 +96,9 @@ namespace NHNAI.Game.Player
             Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = !locked;
         }
+
+        /// <summary>부트스트랩이 몸통을 꽂아 준다.</summary>
+        public void Bind(Transform body) => yawTarget = body;
 
         /// <summary>eulerAngles 는 0~360 으로 돌아온다. 위를 보는 각을 음수로 되돌린다.</summary>
         static float SignedAngle(float degrees)
