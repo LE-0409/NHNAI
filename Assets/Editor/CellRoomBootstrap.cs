@@ -32,6 +32,8 @@ namespace NHNAI.EditorTools
         const string HudUxmlPath = "Assets/UI/Screens/Hud/Hud.uxml";
         const string CoinClipPath = "Assets/Audio/CoinDispense.mp3";
         const string ReelTickClipPath = "Assets/Audio/ReelTick.mp3";
+        const string CoinPickupClipPath = "Assets/Audio/CoinPickup.mp3";
+        const string CoinInsertClipPath = "Assets/Audio/CoinInsert.mp3";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -496,9 +498,17 @@ namespace NHNAI.EditorTools
         {
             if (player.CameraTransform == null) return;
 
+            var pickupClip = AssetDatabase.LoadAssetAtPath<AudioClip>(CoinPickupClipPath);
+            if (pickupClip == null)
+                Debug.LogError($"[NHNAI] 동전 픽업음이 없다: {CoinPickupClipPath}");
+
+            var insertClip = AssetDatabase.LoadAssetAtPath<AudioClip>(CoinInsertClipPath);
+            if (insertClip == null)
+                Debug.LogError($"[NHNAI] 동전 투입음이 없다: {CoinInsertClipPath}");
+
             // 잡은 동전을 들고 다니는 손. 카메라에 붙는다 — holdOffset 이 카메라 로컬이다.
             var carrier = player.CameraTransform.gameObject.AddComponent<PlayerCoinCarrier>();
-            carrier.Bind(player.Interactor, machine.View, machine.CoinSlot);
+            carrier.Bind(player.Interactor, machine.View, machine.CoinSlot, pickupClip, insertClip);
 
             var physics = BuildCoinPhysicsMaterial();
 

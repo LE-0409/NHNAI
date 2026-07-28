@@ -43,6 +43,16 @@ namespace NHNAI.Game.Player
         [Tooltip("놓을 때 주는 전방 속도(m/s). 던지기가 아니라 떨어뜨리기다")]
         [SerializeField] float dropForward = 0.4f;
 
+        [Header("사운드")]
+        [Tooltip("잡기에 성공한 순간 재생")]
+        [SerializeField] AudioClip pickupClip;
+        [Tooltip("픽업음 음량")]
+        [SerializeField, Range(0f, 1f)] float pickupVolume = 0.9f;
+        [Tooltip("흡입이 끝나 동전이 슬릿으로 떨어지는 순간 재생")]
+        [SerializeField] AudioClip insertClip;
+        [Tooltip("투입음 음량")]
+        [SerializeField, Range(0f, 1f)] float insertVolume = 0.9f;
+
         [Header("부품 — 부트스트랩이 채운다")]
         [SerializeField] PlayerInteractor interactor;
         [SerializeField] SlotMachineView slotView;
@@ -55,15 +65,38 @@ namespace NHNAI.Game.Player
         Vector3 _insertFrom;
         Quaternion _insertFromRot;
         int _grabFrame;      // 잡은 클릭이 같은 프레임에 '놓기' 로 겹치지 않게 하는 가드
+        AudioSource _audio;
+        AudioSource _slotAudio;
 
         public bool IsCarrying => _held != null;
 
         /// <summary>부트스트랩이 씬에서 만든 부품을 꽂아 준다.</summary>
-        public void Bind(PlayerInteractor playerInteractor, SlotMachineView view, Transform intake)
+        public void Bind(PlayerInteractor playerInteractor, SlotMachineView view, Transform intake,
+                         AudioClip pickup, AudioClip insert)
         {
             interactor = playerInteractor;
             slotView = view;
             intakeAnchor = intake;
+            pickupClip = pickup;
+            insertClip = insert;
+        }
+
+        void Awake()
+        {
+            // 픽업음 스피커. 내 손이 내는 소리라 2D 로 낸다 — 이 컴포넌트는 리스너와
+            // 같은 카메라에 붙어 있어 3D 로 둬도 거리 0 의 패닝만 남고 얻는 것이 없다.
+            _audio = gameObject.AddComponent<AudioSource>();
+            _audio.playOnAwake = false;
+            _audio.spatialBlend = 0f;
+
+            // 투입음 스피커. 슬릿 입구에 붙여야 소리가 기계 쪽에서 난다.
+            var speaker = intakeAnchor != null ? intakeAnchor.gameObject : gameObject;
+            _slotAudio = speaker.AddComponent<AudioSource>();
+            _slotAudio.playOnAwake = false;
+            _slotAudio.spatialBlend = 1f;   // 3D — 투입구 위치에서 들려온다
+            // 도플러를 끈다. 켜 두면 리스너(카메라)가 기계 반대쪽을 볼 때 소리가
+            // 끊기는 Unity 버그가 있다 (Unity 6 에서도 재현). 투입구는 정지물이다.
+            _slotAudio.dopplerLevel = 0f;
         }
 
         /// <summary><see cref="Coin.Interact"/> 가 부른다. 이미 들고 있으면 거절한다.</summary>
@@ -75,6 +108,7 @@ namespace NHNAI.Game.Player
             _grabFrame = Time.frameCount;
             coin.AttachToHand();
             if (interactor != null) interactor.enabled = false;
+            if (pickupClip != null) _audio.PlayOneShot(pickupClip, pickupVolume);
             return true;
         }
 
@@ -151,6 +185,7 @@ namespace NHNAI.Game.Player
 
             if (t < 1f) return;
 
+            if (insertClip != null) _slotAudio.PlayOneShot(insertClip, insertVolume);
             if (slotView != null) slotView.InsertCoin();
             Destroy(_inserting.gameObject);
             _inserting = null;
