@@ -31,7 +31,7 @@ PIPELINE = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(PIPELINE, "lib"))
 sys.path.insert(0, HERE)
 
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from lowpoly_lib import builders, export, palette, paths, preview
 
@@ -66,17 +66,38 @@ SYM_R = APOTHEM + SYM_T / 2                          # 심볼 판이 놓이는 �
 LEVER_X = W / 2 + 0.05
 LEVER_HUB = (LEVER_X - 0.02, -0.04, BODY_TOP + 0.05)  # 레버 회전축
 
-# 심볼 8종. (이름, 접선폭, 축방향폭, 축방향 오프셋 목록)
-# 형태만으로 구분되게 했다 — 흑백이라 색으로는 구분이 안 된다.
+# 심볼 8종. **실루엣만으로 구분한다** — 흑백 팔레트라 색으로 나눌 수 없고,
+# 직사각형끼리는 창 안에서 가로세로 비율 차이로만 갈려 결국 다 같아 보인다.
+# 그래서 동그라미 · 네모 · 세모처럼 윤곽이 서로 안 닮은 형태로 짠다.
+#
+# 마크 하나가 판 하나다. 심볼 하나에 여러 개를 겹칠 수 있다 (십자 · 별).
+
+
+def poly(n, radius, spin=0.0, dr=0.0):
+    """정n각형 판. n=3 세모, n=4 마름모, n≥12 는 이 크기에서 사실상 원.
+
+    spin=0 이면 꼭짓점 하나가 창의 **위쪽**을 향한다. dr 은 반지름 방향 덧댐 —
+    겹치는 마크를 살짝 띄워 같은 평면에서 z-파이팅 하는 것을 막는다.
+    """
+    return ("poly", n, radius, spin, dr)
+
+
+def rect(up, across, dr=0.0):
+    """직사각형 판. up = 릴이 흐르는 방향(창에서 세로), across = 드럼 축 방향(가로)."""
+    return ("rect", up, across, dr)
+
+
+# 면 하나의 크기는 세로 0.099 (= 2·R·sin22.5°) · 가로 0.11 (= REEL_W) 이다.
+# 여유를 두고 어느 쪽도 0.076 을 넘기지 않는다.
 SYMBOLS = [
-    ("bar1",   0.070, 0.030, (0.0,)),
-    ("bar2",   0.070, 0.013, (-0.013, 0.013)),
-    ("bar3",   0.070, 0.009, (-0.020, 0.0, 0.020)),
-    ("square", 0.040, 0.040, (0.0,)),
-    ("tall",   0.022, 0.055, (0.0,)),
-    ("wide",   0.065, 0.020, (0.0,)),
-    ("dot",    0.024, 0.024, (0.0,)),
-    ("blank",  0.0,   0.0,   ()),
+    ("circle",   (poly(12, 0.035),)),
+    ("square",   (rect(0.060, 0.060),)),
+    ("triangle", (poly(3, 0.044),)),
+    ("diamond",  (poly(4, 0.038),)),
+    ("cross",    (rect(0.068, 0.022), rect(0.022, 0.068, dr=0.0006))),
+    ("star",     (poly(3, 0.036), poly(3, 0.036, spin=180, dr=0.0006))),   # 세모 둘을 엇갈려 6각별
+    ("bar",      (rect(0.024, 0.074),)),
+    ("blank",    ()),
 ]
 
 
@@ -91,6 +112,37 @@ def set_pivot(obj, pivot):
     for v in obj.data.vertices:
         v.co -= p
     obj.location = p
+    return obj
+
+
+def mark_center(theta, dr):
+    """각도 theta 인 면 바깥 SYM_R+dr 지점 (릴 로컬 좌표)."""
+    r = SYM_R + dr
+    return (r * math.cos(theta), r * math.sin(theta), 0.0)
+
+
+def face_rotation(theta, spin):
+    """프리즘 축(로컬 Z)을 면 바깥으로 눕히고, 단면을 면 안에서 spin(도) 만큼 돌린다.
+
+    spin=0 에서 꼭짓점 하나가 **창의 위쪽**을 향한다. 릴을 나중에 통째로 눕히는
+    회전(Y 90도)까지 따라가야 나오는 값이라 오일러 각을 손으로 적지 않고 행렬을
+    곱해 뽑는다 — 눈으로 맞추려고 각도를 하나 건드리면 축이 같이 돌아 어긋난다.
+    """
+    return (Matrix.Rotation(theta, 4, "Z")
+            @ Matrix.Rotation(math.radians(90), 4, "Y")
+            @ Matrix.Rotation(math.radians(spin - 90), 4, "Z")).to_euler("XYZ")
+
+
+def build_mark(name, mark, theta):
+    """면 위에 심볼 마크 하나를 세운다."""
+    if mark[0] == "rect":
+        _, up, across, dr = mark
+        return builders.box(name, (SYM_T, up, across), loc=mark_center(theta, dr),
+                            rot=(0, 0, math.degrees(theta)), color="chalk")
+
+    _, n, radius, spin, dr = mark
+    obj = builders.prism(name, radius, SYM_T, n=n, loc=mark_center(theta, dr), color="chalk")
+    obj.rotation_euler = face_rotation(theta, spin)
     return obj
 
 
@@ -168,15 +220,10 @@ for ri, rx in enumerate(REEL_X):
         palette.apply_color(parts[0], "bone" if fi % 2 else "concrete", faces=[fi])
 
     for fi in range(REEL_N):
-        name, w, d, offsets = SYMBOLS[(fi + ri * 3) % len(SYMBOLS)]   # 릴마다 배열을 어긋나게
-        if not offsets:
-            continue
-        theta = 2 * math.pi * (fi + 0.5) / REEL_N       # 면 중심 각도
-        cx, cy = SYM_R * math.cos(theta), SYM_R * math.sin(theta)
-        for oi, dz in enumerate(offsets):
-            parts.append(builders.box(
-                f"Sym_{ri}_{fi}_{oi}", (SYM_T, w, d),
-                loc=(cx, cy, dz), rot=(0, 0, math.degrees(theta)), color="chalk"))
+        sym, marks = SYMBOLS[(fi + ri * 3) % len(SYMBOLS)]   # 릴마다 배열을 어긋나게
+        theta = 2 * math.pi * (fi + 0.5) / REEL_N            # 면 중심 각도
+        for mi, mark in enumerate(marks):
+            parts.append(build_mark(f"Sym_{ri}_{fi}_{sym}_{mi}", mark, theta))
 
     reel = builders.join_all(parts, f"Reel_{ri}")
     # 눕혀서 제자리로 보낸 뒤 다시 구워 회전을 정점에 흡수시킨다.
@@ -210,6 +257,11 @@ palette.use_emissive_material(backlight)
 # 유리를 숨긴다. Workbench 는 알파를 반영하지 않아 두면 불투명 판이 릴을 덮는다.
 glass.hide_render = True
 preview.render_turnaround("slot_machine", [machine] + reels + [lever])
+# 심볼 클로즈업. 전체 렌더에서는 릴 창이 손톱만 해 형태가 구분되는지 알 수 없다.
+# 릴만 넘기면 프레이밍이 릴 크기로 좁혀진다 — 카메라 설정은 건드릴 게 없다.
+preview.render_turnaround("slot_machine_reels", reels,
+                          out_dir=os.path.join(paths.PREVIEWS, "slot_machine"),
+                          views={"front": Vector((0.0, -1.0, 0.0))})
 glass.hide_render = False
 
 objs = [machine] + reels + [lever, glass, backlight]
