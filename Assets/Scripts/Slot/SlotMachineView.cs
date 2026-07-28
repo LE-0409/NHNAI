@@ -116,9 +116,13 @@ namespace NHNAI.Game.Slot
         /// 환불이 가능한가. 스핀 중에는 막는다 — 이미 크레딧 하나가 릴에 걸려 있어
         /// '전부 돌려받았다' 는 인상과 실제 잔액이 어긋난다. 배출 중에도 막는다 —
         /// 당첨 소나기에 환불 동전이 섞이면 딴 돈과 되찾은 돈이 구분되지 않는다.
+        /// 레버 동작 중과 징글 중에도 막는다 — 레버 타임라인에는 아직 크레딧을
+        /// 소모하지 않은 스핀 예약이 걸려 있어 환불이 그 크레딧을 빼앗으면 레버가
+        /// 헛손질이 되고, 징글 뒤로 미뤄 둔 배출에는 환불이 끼어들면 안 된다.
         /// </summary>
         public bool CanRefund => dispenser != null && !dispenser.Dispensing
-                              && _machine.Credits > 0 && !IsSpinning;
+                              && _machine.Credits > 0 && !IsSpinning
+                              && _leverTimer < 0f && _winWait < 0f;
 
         /// <summary>넣어 둔 동전을 전부 되뱉는다. 배출 경로는 당첨과 같다 — 기계의 출구는 하나다.</summary>
         public void Refund()
@@ -173,7 +177,8 @@ namespace NHNAI.Game.Slot
             if (!CanPull) return;
             // 시드는 지금 뽑아 두지만 스핀은 레버가 바닥을 치는 순간 시작한다 —
             // 릴은 레버가 돌리는 것이지 클릭이 돌리는 것이 아니다. 그 사이 크레딧이
-            // 늘 수는 있어도 줄 수는 없으므로(소비자가 스핀뿐) 예약이 무산될 일은 없다.
+            // 줄어들 길은 환불뿐인데, CanRefund 가 레버 동작 중을 막아 예약이 무산될
+            // 일은 없다 (늘어나는 것은 무해하다 — 소모는 예약된 스핀이 한다).
             _queuedSeed = Random.Range(int.MinValue, int.MaxValue);
             _spinQueued = true;
             _upSoundPlayed = false;
