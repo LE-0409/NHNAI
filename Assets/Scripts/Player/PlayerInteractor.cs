@@ -20,6 +20,9 @@ namespace NHNAI.Game.Player
         [Tooltip("조준 판정에 쓸 레이어. 기본은 전부")]
         [SerializeField] LayerMask mask = ~0;
 
+        [Tooltip("정밀 레이가 빗나갔을 때의 보조 반경(m). 바닥의 동전처럼 작은 것을 노리기 쉽게 한다")]
+        [SerializeField] float aimAssistRadius = 0.06f;
+
         Camera _camera;
         Interactable _target;
 
@@ -50,16 +53,40 @@ namespace NHNAI.Game.Player
             }
         }
 
+        // 동전 캐리어가 드는 동안 이 컴포넌트를 끈다. 조준점이 켜진 채 남지 않게
+        // 상태를 정리하고 나간다 — HUD 는 이벤트만 보므로 여기서 꺼 줘야 한다.
+        void OnDisable()
+        {
+            if (_target == null) return;
+            _target = null;
+            TargetChanged?.Invoke(false);
+        }
+
         Interactable Probe()
         {
             // 화면 정중앙에서 카메라 정면으로. 1인칭이라 카메라가 곧 시선이다.
             var ray = new Ray(_camera.transform.position, _camera.transform.forward);
-            if (!Physics.Raycast(ray, out var hit, reach, mask, QueryTriggerInteraction.Ignore))
-                return null;
+            if (Physics.Raycast(ray, out var hit, reach, mask, QueryTriggerInteraction.Ignore))
+            {
+                var found = Valid(hit.collider);
+                if (found != null) return found;
+            }
 
-            // Collider 와 같은 오브젝트에 있는 것만 인정한다. 부모까지 뒤지면
-            // 캐비닛 아무 데나 조준해도 레버가 잡혀 '어디를 봐야 하는지' 가 흐려진다.
-            var interactable = hit.collider.GetComponent<Interactable>();
+            // 폴백: 바닥의 동전처럼 작은 것은 실루엣이 곧 조준 판정이라 바늘구멍이다.
+            // 콜라이더를 키우는 대신(물리는 실루엣대로 타이트해야 한다) 조준만 넉넉하게
+            // 한다. 레버처럼 큰 대상은 위의 정밀 레이가 먼저 잡아 감각이 변하지 않는다.
+            if (Physics.SphereCast(ray, aimAssistRadius, out hit, reach, mask,
+                                   QueryTriggerInteraction.Ignore))
+                return Valid(hit.collider);
+
+            return null;
+        }
+
+        // Collider 와 같은 오브젝트에 있는 것만 인정한다. 부모까지 뒤지면
+        // 캐비닛 아무 데나 조준해도 레버가 잡혀 '어디를 봐야 하는지' 가 흐려진다.
+        static Interactable Valid(Collider collider)
+        {
+            var interactable = collider.GetComponent<Interactable>();
             return interactable != null && interactable.CanInteract ? interactable : null;
         }
     }

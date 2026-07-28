@@ -34,6 +34,15 @@ namespace NHNAI.Game.Slot
 
         public bool CanPull => _machine.CanPull && _leverTimer < 0f;
 
+        /// <summary>넣어 둔 동전 수. 전원 상태(SlotMachinePower)가 읽는다.</summary>
+        public int Credits => _machine.Credits;
+
+        /// <summary>도는 중인가. 크레딧을 먼저 소모하므로 전원 판정에 이 값도 필요하다.</summary>
+        public bool IsSpinning => _machine.State == SlotMachine.Phase.Spinning;
+
+        /// <summary>캐리어가 흡입을 마친 동전을 크레딧으로 바꾼다.</summary>
+        public void InsertCoin() => _machine.InsertCoin();
+
         public void Pull()
         {
             if (!CanPull) return;
