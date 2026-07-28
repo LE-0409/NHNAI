@@ -60,6 +60,14 @@ REEL_Y = 0.03                                        # 창 안쪽으로 물러�
 REEL_X = (-0.14, 0.0, 0.14)
 APOTHEM = REEL_R * math.cos(math.pi / REEL_N)        # 면 중심까지의 거리
 
+# 드럼을 반 칸(22.5도) 돌려 놓는다. 프리즘의 면 중심은 22.5도 + 45도·k 에 있는데
+# SlotMachine.cs 는 45도 배수에서만 멈추므로, 그대로 두면 **창 정중앙에 늘 심볼
+# 두 개가 반반 걸친다.** 반 칸 돌리면 면 중심이 45도 배수로 와 하나가 딱 놓인다.
+# 회전 0 에서 페이라인에 오는 것은 면 5 (= 각도 270도, 전방 −Y) 다.
+# 릴 각도와 심볼 인덱스의 대응은 Unity 쪽 회전 부호에 달렸다 —
+# 당첨 판정을 붙일 때 화면으로 한 번 확인하고 정한다.
+FACE_PHASE = math.pi / REEL_N
+
 SYM_T = 0.012                                        # 심볼 판 두께 (반지름 방향)
 SYM_R = APOTHEM + SYM_T / 2                          # 심볼 판이 놓이는 반지름
 
@@ -212,7 +220,8 @@ machine = builders.join_all(cabinet, "SlotMachine")
 # 상태로 계산하면 각도·오프셋이 전부 뒤틀려 읽기 어려워진다.
 reels = []
 for ri, rx in enumerate(REEL_X):
-    parts = [builders.prism(f"Drum_{ri}", REEL_R, REEL_W, n=REEL_N, color="concrete")]
+    parts = [builders.prism(f"Drum_{ri}", REEL_R, REEL_W, n=REEL_N,
+                            rot=(0, 0, math.degrees(FACE_PHASE)), color="concrete")]
 
     # 면마다 밝기를 번갈아 준다. 심볼이 없어도 회전이 눈에 보이게 하는 장치다.
     # prism 의 폴리곤 0..n-1 이 옆면이고 그 뒤가 바닥·천장 캡이다.
@@ -221,7 +230,7 @@ for ri, rx in enumerate(REEL_X):
 
     for fi in range(REEL_N):
         sym, marks = SYMBOLS[(fi + ri * 3) % len(SYMBOLS)]   # 릴마다 배열을 어긋나게
-        theta = 2 * math.pi * (fi + 0.5) / REEL_N            # 면 중심 각도
+        theta = 2 * math.pi * (fi + 0.5) / REEL_N + FACE_PHASE   # 면 중심 각도 (드럼과 같이 돌린다)
         for mi, mark in enumerate(marks):
             parts.append(build_mark(f"Sym_{ri}_{fi}_{sym}_{mi}", mark, theta))
 
