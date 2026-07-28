@@ -15,9 +15,11 @@ namespace NHNAI.Game.Slot
     /// 규칙과 섞으면 애니메이션 길이가 게임 로직을 붙잡게 된다. 다만 **시점** 하나는
     /// 레버가 정한다 — 스핀은 레버가 바닥을 치는 순간 시작한다 (TickLever 참조).
     ///
-    /// 당첨 사운드도 여기서 오케스트레이션한다: 큰 성공이면 징글을 틀고, 배출은
-    /// 징글이 끝날 때까지 미룬다. 그동안 불빛은 <see cref="SlotMachineWinEffect"/> 의
+    /// 당첨 사운드도 여기서 오케스트레이션한다: 당첨 등급(2개·3개 일치)마다 징글을
+    /// 틀고, 배출은 징글이 끝날 때까지 미룬다. 그동안 불빛은 <see cref="SlotMachineWinEffect"/> 의
     /// 홀드로 반짝임 없이 켜 둔다 — 반짝임은 동전이 나올 때만의 신호다.
+    /// 노래가 겹치면 큰 성공만 진행 중인 노래를 끊고 처음부터 다시 튼다 —
+    /// 작은 성공이 큰 노래를 자르면 위계가 뒤집힌다.
     /// </summary>
     public sealed class SlotMachineView : MonoBehaviour
     {
@@ -60,9 +62,11 @@ namespace NHNAI.Game.Slot
         [SerializeField] AudioClip leverUpClip;
         [SerializeField, Range(0f, 1f)] float leverVolume = 0.9f;
 
-        [Header("당첨 사운드")]
-        [Tooltip("큰 성공(3개 일치)에서 재생. 동전은 이 노래가 다 끝난 뒤에야 나온다")]
+        [Header("당첨 사운드 — 동전은 노래가 다 끝난 뒤에야 나온다")]
+        [Tooltip("큰 성공(3개 일치)에서 재생")]
         [SerializeField] AudioClip winClip;
+        [Tooltip("작은 성공(2개 일치)에서 재생. 흐름은 큰 성공과 같다 — 노래 → 배출")]
+        [SerializeField] AudioClip smallWinClip;
         [SerializeField, Range(0f, 1f)] float winVolume = 0.9f;
 
         readonly SlotMachine _machine = new();
@@ -159,8 +163,7 @@ namespace NHNAI.Game.Slot
             // 레버음은 레버 위치에서, 징글은 기계 루트에서. 설정은 틱 스피커와 같다 —
             // 3D 로 기계에서 들려오고, 도플러는 위의 Unity 버그 때문에 끈다.
             _leverAudio = MakeSpeaker(lever != null ? lever.gameObject : gameObject);
-            _winAudio = MakeSpeaker(gameObject);
-            _winAudio.clip = winClip;
+            _winAudio = MakeSpeaker(gameObject);   // 클립은 당첨 등급에 따라 재생 직전에 꽂는다
         }
 
         static AudioSource MakeSpeaker(GameObject host)
@@ -199,20 +202,27 @@ namespace NHNAI.Game.Slot
                 if (winEffect != null) winEffect.OnSpinEnd(_machine.Result);
                 // 빛의 펄스는 여기서 내지 않는다 — 배출기가 동전 하나당 하나씩 낸다.
                 var payout = SlotMachine.PayoutOf(_machine.Result);
-                if (_machine.Result == SlotMachine.Win.Big && winClip != null)
+                var jingle = _machine.Result == SlotMachine.Win.Big ? winClip
+                           : _machine.Result == SlotMachine.Win.Small ? smallWinClip
+                           : null;
+                if (payout > 0 && jingle != null
+                    && (_machine.Result == SlotMachine.Win.Big || _winWait < 0f))
                 {
-                    // 큰 성공: 노래가 다 끝난 뒤에야 동전이 나온다. 노래 동안 불빛은
-                    // 반짝이지 않고 켜져만 있다 (WinEffect 의 홀드). 노래 중 재당첨이면
-                    // Play() 가 처음부터 다시 틀고 배출은 그만큼 더 쌓인다.
+                    // 노래가 다 끝난 뒤에야 동전이 나온다. 노래 동안 불빛은 반짝이지
+                    // 않고 켜져만 있다 (WinEffect 의 홀드). 노래 중 재당첨이면 큰 성공만
+                    // 처음부터 다시 틀고, 작은 성공은 진행 중인 노래를 끊지 않는다
+                    // (아래 분기로 빠진다) — 어느 쪽이든 배출은 그만큼 더 쌓인다.
+                    _winAudio.clip = jingle;
                     _winAudio.volume = winVolume;   // 인스펙터에서 굴린 값이 다음 재생부터 먹게
                     _winAudio.Play();
-                    _winWait = winClip.length;
+                    _winWait = jingle.length;
                     _pendingPayout += payout;
                     if (winEffect != null) winEffect.BeginHold();
                 }
                 else if (payout > 0)
                 {
-                    // 작은 성공은 즉시. 단, 징글이 흐르는 중이면 노래를 존중해 뒤로 미룬다 —
+                    // 노래를 못 트는 당첨 — 클립 미배선이거나, 노래 중의 작은 성공.
+                    // 징글이 흐르는 중이면 노래를 존중해 뒤로 미루고, 아니면 즉시 뱉는다 —
                     // 노래 중에는 반짝이지 않는다는 약속이 여기서도 지켜져야 한다.
                     if (_winWait >= 0f) _pendingPayout += payout;
                     else if (dispenser != null) dispenser.Dispense(payout);
@@ -341,7 +351,7 @@ namespace NHNAI.Game.Slot
         public void Bind(Transform[] reelTransforms, Transform leverTransform,
                          SlotMachineWinEffect effect, CoinDispenser coinDispenser,
                          AudioClip spinTickClip, AudioClip leverDown, AudioClip leverUp,
-                         AudioClip winJingle)
+                         AudioClip winJingle, AudioClip smallWinJingle)
         {
             reels = reelTransforms;
             lever = leverTransform;
@@ -351,6 +361,7 @@ namespace NHNAI.Game.Slot
             leverDownClip = leverDown;
             leverUpClip = leverUp;
             winClip = winJingle;
+            smallWinClip = smallWinJingle;
         }
     }
 }

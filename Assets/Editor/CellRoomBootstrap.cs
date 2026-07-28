@@ -36,7 +36,8 @@ namespace NHNAI.EditorTools
         const string CoinInsertClipPath = "Assets/Audio/CoinInsert.mp3";
         const string LeverDownClipPath = "Assets/Audio/LeverDown.mp3";
         const string LeverUpClipPath = "Assets/Audio/LeverUp.mp3";
-        const string WinClipPath = "Assets/Audio/WinJingle.mp3";
+        const string WinClipPath = "Assets/Audio/WinJingleBig.mp3";
+        const string SmallWinClipPath = "Assets/Audio/WinJingleSmall.mp3";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -224,9 +225,14 @@ namespace NHNAI.EditorTools
 
             var winClip = AssetDatabase.LoadAssetAtPath<AudioClip>(WinClipPath);
             if (winClip == null)
-                Debug.LogError($"[NHNAI] 승리 징글이 없다: {WinClipPath}");
+                Debug.LogError($"[NHNAI] 큰 성공 징글이 없다: {WinClipPath}");
 
-            view.Bind(reels, lever, effect, dispenser, tickClip, leverDownClip, leverUpClip, winClip);
+            var smallWinClip = AssetDatabase.LoadAssetAtPath<AudioClip>(SmallWinClipPath);
+            if (smallWinClip == null)
+                Debug.LogError($"[NHNAI] 작은 성공 징글이 없다: {SmallWinClipPath}");
+
+            view.Bind(reels, lever, effect, dispenser, tickClip, leverDownClip, leverUpClip,
+                      winClip, smallWinClip);
             // dispenser 의 앵커·템플릿·트레이 조명은 BuildCoins 단계가 꽂는다.
 
             var rig = new MachineRig
