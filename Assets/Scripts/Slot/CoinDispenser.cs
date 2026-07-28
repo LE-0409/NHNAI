@@ -91,6 +91,9 @@ namespace NHNAI.Game.Slot
             _audio = speaker.AddComponent<AudioSource>();
             _audio.playOnAwake = false;
             _audio.spatialBlend = 1f;   // 3D — 기계 위치에서 들려온다
+            // 도플러를 끈다. 켜 두면 리스너(카메라)가 기계 반대쪽을 볼 때 소리가
+            // 끊기는 Unity 버그가 있다 (Unity 6 에서도 재현). 배출구는 정지물이다.
+            _audio.dopplerLevel = 0f;
         }
 
         void Update()

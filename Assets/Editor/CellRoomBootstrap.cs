@@ -31,6 +31,7 @@ namespace NHNAI.EditorTools
         const string FbxDir = "Assets/Art/Environment";
         const string HudUxmlPath = "Assets/UI/Screens/Hud/Hud.uxml";
         const string CoinClipPath = "Assets/Audio/CoinDispense.mp3";
+        const string ReelTickClipPath = "Assets/Audio/ReelTick.mp3";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -203,7 +204,11 @@ namespace NHNAI.EditorTools
             power.Bind(view, reelLight,
                        backlight != null ? backlight.GetComponent<Renderer>() : null,
                        dispenser, effect);
-            view.Bind(reels, lever, effect, dispenser);
+            var tickClip = AssetDatabase.LoadAssetAtPath<AudioClip>(ReelTickClipPath);
+            if (tickClip == null)
+                Debug.LogError($"[NHNAI] 릴 스핀 틱 사운드가 없다: {ReelTickClipPath}");
+
+            view.Bind(reels, lever, effect, dispenser, tickClip);
             // dispenser 의 앵커·템플릿·트레이 조명은 BuildCoins 단계가 꽂는다.
 
             var rig = new MachineRig
