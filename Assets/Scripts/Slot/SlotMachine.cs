@@ -13,11 +13,21 @@ namespace NHNAI.Game.Slot
     /// 판정은 심볼 **인덱스**만 본다. 그것이 '화면에 같은 무늬가 보인다' 와 같은 뜻이려면
     /// 세 릴의 무늬 배열이 같아야 한다 — generate_slot_machine.py 가 릴마다 배열을
     /// 어긋나게 두던 것을 없앤 이유다. 배열을 다시 어긋나게 하면 여기 판정이 거짓말이 된다.
+    ///
+    /// 화폐는 동전이다. 동전 하나가 크레딧 하나, 크레딧 하나가 스핀 한 번이다.
+    /// 크레딧이 없으면 <see cref="CanPull"/> 이 거짓이 되고, 그 게이트가
+    /// Lever → View 체인을 타고 올라가 조준점까지 막는다. 배당(<see cref="PayoutOf"/>)은
+    /// 여기서 개수만 정한다 — 동전을 실제로 뱉는 것은 <c>CoinDispenser</c> 다.
     /// </summary>
     public sealed class SlotMachine
     {
         public const int SymbolCount = 8;
         public const int ReelCount = 3;
+
+        // 배당. 확률(큰 성공 1/64, 작은 성공 21/64)과 짝을 이루는 값이라 여기 둔다 —
+        // 뷰나 배출기에 흩어 두면 확률을 바꿀 때 기대값이 조용히 어긋난다.
+        public const int SmallPayout = 10;
+        public const int BigPayout = 100;
 
         public const float SymbolStep = 360f / SymbolCount;
 
@@ -66,16 +76,29 @@ namespace NHNAI.Game.Slot
         /// <summary>멈춘 뒤의 심볼 인덱스. 도는 중에는 마지막 결과가 남아 있다.</summary>
         public int SymbolOf(int reel) => _reels[reel].Symbol;
 
-        public bool CanPull => State != Phase.Spinning;
+        /// <summary>넣어 둔 동전 수. 스핀 한 번에 하나씩 준다.</summary>
+        public int Credits { get; private set; }
+
+        /// <summary>동전이 들어왔다. 도는 중에도 받는다 — 적립만 되고 스핀에는 다음에 쓴다.</summary>
+        public void InsertCoin() => Credits++;
+
+        public bool CanPull => State != Phase.Spinning && Credits > 0;
+
+        /// <summary>결과에 따라 뱉을 동전 개수. 배출기가 이 값만큼 스폰한다.</summary>
+        public static int PayoutOf(Win win)
+            => win == Win.Big ? BigPayout : win == Win.Small ? SmallPayout : 0;
 
         /// <summary>
-        /// 레버를 당긴다. 같은 seed 면 같은 결과가 나온다 — 재현 가능해야
+        /// 레버를 당긴다. 크레딧 하나를 **먼저** 소모한다 — 그래서 스핀 중에는
+        /// 크레딧이 0 이어도 기계가 살아 있는 상태다 (전원 판정이 이 순서에 기댄다).
+        /// 같은 seed 면 같은 결과가 나온다 — 재현 가능해야
         /// 버그를 다시 만들어 볼 수 있고, 나중에 런 시드를 붙이기도 쉽다.
         /// </summary>
         public void Pull(int seed)
         {
             if (!CanPull) return;
 
+            Credits--;
             _rng = new Random(seed);
             _elapsed = 0f;
             State = Phase.Spinning;
