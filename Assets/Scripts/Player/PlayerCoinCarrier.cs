@@ -24,8 +24,10 @@ namespace NHNAI.Game.Player
     public sealed class PlayerCoinCarrier : MonoBehaviour
     {
         [Header("들기")]
-        [Tooltip("잡은 동전이 떠 있는 카메라 로컬 위치. 오른손에 쥔 느낌의 오른쪽 아래 앞")]
-        [SerializeField] Vector3 holdOffset = new Vector3(0.16f, -0.10f, 0.45f);
+        [Tooltip("잡은 동전이 떠 있는 카메라 로컬 위치. 시선 정중앙 앞 — 드는 동안은 " +
+                 "조준점이 꺼져 있어 가리는 것이 없고, 투입구를 바라보면 동전이 " +
+                 "그대로 앵커 위에 겹쳐 흡입 판정이 정직해진다")]
+        [SerializeField] Vector3 holdOffset = new Vector3(0f, 0f, 0.45f);
         [Tooltip("추적 감쇠. 클수록 손이 시선을 빨리 따라잡는다")]
         [SerializeField] float followSharpness = 18f;
 
