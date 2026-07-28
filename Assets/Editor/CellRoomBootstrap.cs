@@ -38,6 +38,7 @@ namespace NHNAI.EditorTools
         const string LeverUpClipPath = "Assets/Audio/LeverUp.mp3";
         const string WinClipPath = "Assets/Audio/WinJingleBig.mp3";
         const string SmallWinClipPath = "Assets/Audio/WinJingleSmall.mp3";
+        const string AmbienceClipPath = "Assets/Audio/CellAmbience.mp3";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -99,6 +100,7 @@ namespace NHNAI.EditorTools
 
             var machineRig = BuildEnvironment();
             BuildLighting();
+            BuildAmbience();
             var playerRig = BuildCamera();
             // 동전은 기계(앵커·배출기)와 플레이어(손·충돌체) 양쪽에 걸치므로 맨 뒤다.
             BuildCoins(machineRig, playerRig);
@@ -546,6 +548,45 @@ namespace NHNAI.EditorTools
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogColor = Color.black;
             RenderSettings.fogDensity = 0.085f;
+        }
+
+        // --- 배경음 ----------------------------------------------------------
+
+        /// <summary>
+        /// 배경 앰비언스 음량. **배경음을 조절하는 손잡이는 여기다.**
+        ///
+        /// 효과음(0.9)보다 한참 낮다. 앰비언스가 레버·동전·징글을 덮으면 플레이어가
+        /// 자기 행동의 결과를 못 듣는다. 배경음은 들리는 게 아니라 깔려 있어야 한다.
+        /// </summary>
+        const float AmbienceVolume = 0.35f;
+
+        /// <summary>
+        /// 방을 채우는 배경 앰비언스. 방의 어둠을 소리 쪽에서 받쳐 준다.
+        ///
+        /// 2D 로 재생한다 — 방 안 어디에 서 있든 같은 크기로 깔려야 '공간의 소리' 로
+        /// 들린다. 3D 로 두면 걸어다닐 때 음량이 출렁여서 방 어딘가에 스피커가 놓여
+        /// 있는 것처럼 정체가 들통난다. 그래서 위치도 의미가 없어 원점에 둔다.
+        ///
+        /// 루프는 이어붙이는 지점이 들릴 수 있다 (80 초짜리 통 트랙이라 페이드가 없다).
+        /// 거슬리면 클립 자체를 크로스페이드해 다시 뽑는 쪽이 맞다 — 코드로 덮지 않는다.
+        /// </summary>
+        static void BuildAmbience()
+        {
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AmbienceClipPath);
+            if (clip == null)
+            {
+                Debug.LogError($"[NHNAI] 배경음이 없다: {AmbienceClipPath}");
+                return;
+            }
+
+            var go = new GameObject("Ambience");
+
+            var src = go.AddComponent<AudioSource>();
+            src.clip = clip;
+            src.loop = true;
+            src.playOnAwake = true;   // 씬이 열리는 순간부터 방이 소리를 갖고 있어야 한다
+            src.volume = AmbienceVolume;
+            src.spatialBlend = 0f;    // 2D
         }
 
         // --- 카메라 ----------------------------------------------------------
