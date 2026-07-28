@@ -9,6 +9,10 @@
     --hud-reticle-color: rgb(226, 226, 226);
     /* 토큰 승격 후보: 조준점 지름 */
     --hud-reticle-size: 6px;
+    /* 토큰 승격 후보: 인벤토리 개수 색 — 조준점과 같은 흰색 (완전한 1.0 은 전구 전용) */
+    --hud-coin-count-color: rgb(226, 226, 226);
+    /* 토큰 승격 후보: 인벤토리 개수 크기 */
+    --hud-coin-count-size: 32px;
 
     flex-grow: 1;
     align-items: center;
@@ -36,4 +40,15 @@
 .hud__reticle--active {
     opacity: 1;
     scale: 1;
+}
+
+/* 인벤토리 동전 개수 — 우측 하단. 레이아웃 없이 숫자 하나만 띄운다.
+   루트가 조준점을 중앙 정렬하고 있으므로 absolute 로 흐름에서 뺀다. */
+.hud__coin-count {
+    position: absolute;
+    bottom: 24px;
+    right: 32px;
+    color: var(--hud-coin-count-color);
+    font-size: var(--hud-coin-count-size);
+    -unity-text-align: middle-right;
 }
