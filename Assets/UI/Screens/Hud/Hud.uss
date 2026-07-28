@@ -15,16 +15,17 @@
     justify-content: center;
 }
 
-/* 쓸 수 있는 것을 조준했을 때만 보인다. 평소에는 화면에 아무것도 없어야
-   어두운 방을 그냥 바라보는 장면이 방해받지 않는다. */
+/* 항상 떠 있되 평소에는 희미하고 작다 — 어두운 방을 바라보는 장면을 방해하지
+   않으면서도 시선의 중심은 늘 알 수 있어야 한다. 쓸 수 있는 것을 조준하면
+   커지고 또렷해진다. */
 .hud__reticle {
     width: var(--hud-reticle-size);
     height: var(--hud-reticle-size);
     border-radius: 3px;
     background-color: var(--hud-reticle-color);
 
-    opacity: 0;
-    scale: 0.5;
+    opacity: 0.35;
+    scale: 0.7;
 
     /* transition 계열은 var() 를 쓰지 않는다 — CLAUDE.md 참조 */
     transition-property: opacity, scale;

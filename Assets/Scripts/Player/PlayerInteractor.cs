@@ -14,7 +14,7 @@ namespace NHNAI.Game.Player
     [RequireComponent(typeof(Camera))]
     public sealed class PlayerInteractor : MonoBehaviour
     {
-        [Tooltip("손이 닿는 거리(m). 이보다 멀면 조준점이 뜨지 않는다")]
+        [Tooltip("손이 닿는 거리(m). 이보다 멀면 조준점이 강조되지 않는다")]
         [SerializeField] float reach = 3.6f;
 
         [Tooltip("조준 판정에 쓸 레이어. 기본은 전부")]
@@ -53,7 +53,7 @@ namespace NHNAI.Game.Player
             }
         }
 
-        // 동전 캐리어가 드는 동안 이 컴포넌트를 끈다. 조준점이 켜진 채 남지 않게
+        // 동전 캐리어가 드는 동안 이 컴포넌트를 끈다. 조준점이 강조된 채 남지 않게
         // 상태를 정리하고 나간다 — HUD 는 이벤트만 보므로 여기서 꺼 줘야 한다.
         void OnDisable()
         {

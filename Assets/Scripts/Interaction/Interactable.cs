@@ -8,7 +8,7 @@ namespace NHNAI.Game.Interaction
     /// </summary>
     public abstract class Interactable : MonoBehaviour
     {
-        /// <summary>지금 쓸 수 있는가. false 면 조준해도 조준점이 뜨지 않는다.</summary>
+        /// <summary>지금 쓸 수 있는가. false 면 조준해도 조준점이 강조되지 않는다.</summary>
         public virtual bool CanInteract => true;
 
         public abstract void Interact();

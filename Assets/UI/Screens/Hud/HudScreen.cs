@@ -5,8 +5,9 @@ using UnityEngine.UIElements;
 namespace NHNAI.UI.Hud
 {
     /// <summary>
-    /// 조준점 하나짜리 HUD. <see cref="PlayerInteractor"/> 가 내보내는 조준 상태를 받아
-    /// 클래스만 토글한다 — 실제 등장·퇴장은 Hud.uss 의 transition 이 그린다.
+    /// 조준점 하나짜리 HUD. 조준점은 항상 떠 있고, <see cref="PlayerInteractor"/> 가
+    /// 내보내는 조준 상태를 받아 강조 클래스만 토글한다 — 실제 강조·해제는
+    /// Hud.uss 의 transition 이 그린다.
     ///
     /// UI 가 게임을 구독하지 그 반대가 아니다. NHNAI.Game 은 NHNAI.UI 를 참조할 수 없다.
     /// </summary>
