@@ -112,8 +112,10 @@ namespace NHNAI.EditorTools
             {
                 // 캐비닛만 막는다. 릴은 창 안이라 닿을 일이 없고, 유리·백라이트에 콜라이더를
                 // 붙이면 레버를 조준할 때 앞을 가로막는다. 레버는 아래에서 따로 붙인다.
+                // LeverHub 는 레버 뿌리를 감싸는 통이라 콜라이더를 주면 레버를 노린
+                // 레이를 대신 받아 조준이 먹통이 된다 — 보이기만 하면 되는 부품이다.
                 AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
-                                 "Lever", "ReelGlass", "ReelBacklight");
+                                 "Lever", "LeverHub", "ReelGlass", "ReelBacklight");
                 WireSlotMachine(machine);
             }
         }
@@ -165,14 +167,18 @@ namespace NHNAI.EditorTools
             // 실루엣대로 잡으면 조준이 바늘구멍이 된다. 조준 판정은 보이는 모양이 아니라
             // '노리기 쉬운 크기' 로 잡는 게 맞다.
             //
-            // 캡슐은 레버 로컬 +Y 를 따라 선다 — 팔이 위로 뻗고 뒤(−Z)로 조금 눕는다.
-            // 캐비닛 앞면(z=+0.26)이 이 캡슐보다 플레이어에 가까워서, 앞에서 캐비닛을
-            // 조준했을 때 레버가 잘못 잡히지는 않는다.
+            // 캡슐은 레버 로컬 +Y 를 따라 선다. 팔이 곧게 서 있으므로 눕힌 만큼의
+            // z 보정이 필요 없다 — 생성 스크립트의 LEVER_TILT 를 0 이 아니게 바꾸면
+            // 여기 center.z 도 같이 옮겨야 캡슐이 팔을 벗어나지 않는다.
+            //
+            // 레버가 캐비닛 앞면(z=+0.26)보다 앞으로 나왔으므로 캡슐도 앞으로 튀어나온다.
+            // 기계 오른쪽 끝 4 cm 쯤(창 오른쪽 프레임)을 조준하면 캐비닛 대신 레버가
+            // 잡힌다. 그 자리엔 어차피 다른 상호작용이 없어서 손해가 아니라 이득이다.
             var capsule = lever.gameObject.AddComponent<CapsuleCollider>();
             capsule.direction = 1;                                   // Y 축
             capsule.height = 0.42f;
             capsule.radius = 0.09f;
-            capsule.center = new Vector3(0.01f, 0.15f, -0.05f);
+            capsule.center = new Vector3(0.01f, 0.15f, 0f);
 
             lever.gameObject.AddComponent<SlotMachineLever>().Bind(view);
 

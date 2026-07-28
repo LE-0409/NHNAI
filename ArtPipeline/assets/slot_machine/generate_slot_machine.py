@@ -3,10 +3,12 @@
 앤틱 업라이트 캐비닛. 아래에서 위로 받침 → 본체 → 조작대 → 릴 창 → 마퀴 순이고,
 오른쪽 옆에 레버가 붙는다. 전체 높이 약 1.72 m.
 
-**FBX 하나에 오브젝트 6개가 들어간다.** 움직이는 부품은 따로 나와야 Unity 가 돌릴 수 있다.
+**FBX 하나에 오브젝트 8개가 들어간다.** 움직이는 부품은 따로 나와야 Unity 가 돌릴 수 있고,
+레버는 위치를 다시 잡을 일이 잦아 뿌리를 감추는 허브까지 따로 뽑는다.
 
     SlotMachine   캐비닛 전체 (고정). 원점 = 기계 바닥 중앙
     Reel_0/1/2    릴 드럼 3개.  원점 = 각자의 회전축
+    LeverHub      레버 뿌리를 감추는 통 (고정). 원점 = 레버와 같은 회전축
     Lever         레버 팔 + 손잡이. 원점 = 허브 회전축
     ReelGlass     릴 창 유리 (M_Glass)
     ReelBacklight 릴 뒤 발광 패널 (M_Emissive) — 기계는 처음부터 켜져 있다
@@ -72,7 +74,15 @@ SYM_T = 0.012                                        # 심볼 판 두께 (반지
 SYM_R = APOTHEM + SYM_T / 2                          # 심볼 판이 놓이는 반지름
 
 LEVER_X = W / 2 + 0.05
-LEVER_HUB = (LEVER_X - 0.02, -0.04, BODY_TOP + 0.05)  # 레버 회전축
+# 레버는 옆면 **앞쪽**에 단다. 깊이 한가운데(예전 −0.04)에 달면 정면에서 봤을 때
+# 시선이 캐비닛 오른쪽 옆면을 뚫고 지나가 손잡이가 몸통에 가린다 — 플레이어가
+# 옆으로 움직여야 레버가 보이게 된다. 앞으로 당길수록 정면에서 잘 보인다.
+LEVER_HUB = (LEVER_X - 0.02, FRONT + 0.05, BODY_TOP + 0.05)   # 레버 회전축
+LEVER_LEN = 0.30
+LEVER_KNOB_AT = LEVER_LEN + 0.05     # 축에서 손잡이 중심까지
+# 팔이 눕는 각도(도). 양수 = 플레이어 쪽(−Y). **뒤로 눕히지 않는다** —
+# 축을 앞으로 옮겨도 팔이 뒤로 누우면 손잡이 끝이 다시 캐비닛 뒤로 들어가 가린다.
+LEVER_TILT = 0.0
 
 # 심볼 8종. **실루엣만으로 구분한다** — 흑백 팔레트라 색으로 나눌 수 없고,
 # 직사각형끼리는 창 안에서 가로세로 비율 차이로만 갈려 결국 다 같아 보인다.
@@ -210,8 +220,6 @@ cabinet.append(builders.box("Marquee", (W + 0.04, 0.30, MARQUEE_H),
 cabinet.append(builders.box("MarqueePanel", (0.48, 0.02, 0.20),
                             loc=(0, 0.02 - 0.15 - 0.005, HEAD_TOP + MARQUEE_H / 2),
                             color="paper"))
-cabinet.append(builders.prism("LeverHub", 0.045, 0.07, n=10,
-                              loc=LEVER_HUB, rot=(0, 90, 0), color="ash"))
 
 machine = builders.join_all(cabinet, "SlotMachine")
 
@@ -242,12 +250,25 @@ for ri, rx in enumerate(REEL_X):
     set_pivot(reel, (rx, REEL_Y, WIN_Z))
     reels.append(reel)
 
-# --- 레버 (팔 + 손잡이). 허브는 캐비닛에 남고 이 둘만 돈다 --------------------
+# --- 레버 허브 (고정) --------------------------------------------------------
+# 캐비닛과 **합치지 않는다.** 합쳐 두면 레버 위치를 다시 잡을 때 팔만 따라오고
+# 뿌리를 감추는 이 통은 원래 자리에 남는다. 원점을 레버와 같은 회전축에 맞춰
+# 뽑아, 둘을 같은 localPosition 으로 옮기면 조립체가 통째로 움직이게 한다.
+hub = builders.join_all(
+    [builders.prism("LeverHub", 0.045, 0.07, n=10, loc=LEVER_HUB, rot=(0, 90, 0), color="ash")],
+    "LeverHub")
+set_pivot(hub, LEVER_HUB)
+
+# --- 레버 (팔 + 손잡이). 허브는 고정이고 이 둘만 돈다 ------------------------
+# 팔·손잡이 자리는 축에서 계산한다. 좌표를 따로 적어 두면 축을 옮길 때 뿌리가
+# 허브에서 떨어져 공중에 뜬다.
+LEVER_DIR = Vector((0.0, -math.sin(math.radians(LEVER_TILT)), math.cos(math.radians(LEVER_TILT))))
 lever_parts = [
-    builders.prism("LeverArm", 0.016, 0.30, n=6,
-                   loc=(LEVER_X, 0.01, BODY_TOP + 0.19), rot=(-20, 0, 0), color="bone"),
+    builders.prism("LeverArm", 0.016, LEVER_LEN, n=6,
+                   loc=Vector(LEVER_HUB) + LEVER_DIR * (LEVER_LEN / 2),
+                   rot=(LEVER_TILT, 0, 0), color="bone"),
     builders.icosphere("LeverKnob", 0.048, subdiv=1,
-                       loc=(LEVER_X, 0.06, BODY_TOP + 0.33), color="chalk"),
+                       loc=Vector(LEVER_HUB) + LEVER_DIR * LEVER_KNOB_AT, color="chalk"),
 ]
 lever = builders.join_all(lever_parts, "Lever")
 set_pivot(lever, LEVER_HUB)
@@ -265,7 +286,7 @@ palette.use_emissive_material(backlight)
 # --- 프리뷰 · 익스포트 -------------------------------------------------------
 # 유리를 숨긴다. Workbench 는 알파를 반영하지 않아 두면 불투명 판이 릴을 덮는다.
 glass.hide_render = True
-preview.render_turnaround("slot_machine", [machine] + reels + [lever])
+preview.render_turnaround("slot_machine", [machine] + reels + [hub, lever])
 # 심볼 클로즈업. 전체 렌더에서는 릴 창이 손톱만 해 형태가 구분되는지 알 수 없다.
 # 릴만 넘기면 프레이밍이 릴 크기로 좁혀진다 — 카메라 설정은 건드릴 게 없다.
 preview.render_turnaround("slot_machine_reels", reels,
@@ -273,7 +294,7 @@ preview.render_turnaround("slot_machine_reels", reels,
                           views={"front": Vector((0.0, -1.0, 0.0))})
 glass.hide_render = False
 
-objs = [machine] + reels + [lever, glass, backlight]
+objs = [machine] + reels + [hub, lever, glass, backlight]
 export.export_static(objs, paths.art("Environment", "SlotMachine.fbx"))
 print("EXPORTED SlotMachine")
 
