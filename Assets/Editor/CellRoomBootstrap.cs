@@ -30,6 +30,7 @@ namespace NHNAI.EditorTools
         const string ProfilePath = "Assets/Settings/CellRoomVolume.asset";
         const string FbxDir = "Assets/Art/Environment";
         const string HudUxmlPath = "Assets/UI/Screens/Hud/Hud.uxml";
+        const string CoinClipPath = "Assets/Audio/CoinDispense.mp3";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -531,9 +532,13 @@ namespace NHNAI.EditorTools
             // 템플릿은 보이지 않는다. 배출기와 아래 시작 동전이 복제해 쓴다.
             template.SetActive(false);
 
+            var coinClip = AssetDatabase.LoadAssetAtPath<AudioClip>(CoinClipPath);
+            if (coinClip == null)
+                Debug.LogError($"[NHNAI] 동전 배출음이 없다: {CoinClipPath}");
+
             if (machine.Dispenser != null)
                 machine.Dispenser.Bind(template, machine.PayoutMouth, machine.CoinTray,
-                                       machine.TrayLight, machine.Effect);
+                                       machine.TrayLight, machine.Effect, coinClip);
 
             // 시작 동전 3개 — 스폰(0, 0.05, 1.6)에서 기계로 걷는 동선 좌우, 빛 원뿔
             // (바닥 반경 ~1.77 m) 안. 바닥에 떨어진 동전을 주워 넣는 첫 행동을

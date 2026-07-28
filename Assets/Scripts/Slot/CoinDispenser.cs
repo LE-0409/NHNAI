@@ -11,6 +11,7 @@ namespace NHNAI.Game.Slot
     /// 여기서 일정 간격으로 하나씩 배출구(PayoutMouth) 앞에 스폰해 트레이로 떨어뜨린다.
     /// 스폰할 때마다 <see cref="SlotMachineWinEffect.FlashCoin"/> 을 불러 펄스를 하나
     /// 낸다 — 드라이버가 하나라 "번쩍임 수 = 동전 수" 가 어긋날 길이 없다.
+    /// 배출음도 같은 자리에서 PlayOneShot 으로 겹쳐 낸다 (소리 수 = 동전 수).
     /// 큰 성공 100개 x 0.1초 = 10초짜리 소나기다.
     ///
     /// 트레이 조명도 여기서 관리한다: 배출 중이거나 배출된 동전이 트레이 부근에
@@ -24,6 +25,12 @@ namespace NHNAI.Game.Slot
         [SerializeField] float interval = 0.1f;
         [Tooltip("배출구에서 나오는 전방 속도(m/s). generate_slot_machine.py 의 낙하 검산과 같은 값")]
         [SerializeField] float ejectSpeed = 0.3f;
+
+        [Header("사운드")]
+        [Tooltip("동전 한 개가 나올 때마다 재생. PlayOneShot 이라 앞 소리를 끊지 않고 겹친다")]
+        [SerializeField] AudioClip coinClip;
+        [Tooltip("배출음 음량")]
+        [SerializeField, Range(0f, 1f)] float coinVolume = 0.9f;
 
         [Header("트레이 조명")]
         [Tooltip("트레이 조명이 켜졌을 때의 세기")]
@@ -48,6 +55,7 @@ namespace NHNAI.Game.Slot
         int _pending;       // 아직 못 뱉은 동전 수. 배출 중 재당첨이면 그냥 쌓인다
         float _timer;
         float _lightLevel;
+        AudioSource _audio;
 
         /// <summary>배출이 진행 중인가. 전원 상태가 '살아 있음' 의 근거로 읽는다.</summary>
         public bool Dispensing => _pending > 0;
@@ -60,13 +68,14 @@ namespace NHNAI.Game.Slot
 
         /// <summary>부트스트랩이 씬에서 만든 부품을 꽂아 준다.</summary>
         public void Bind(GameObject template, Transform mouthAnchor, Transform trayAnchor,
-                         Light light, SlotMachineWinEffect effect)
+                         Light light, SlotMachineWinEffect effect, AudioClip clip)
         {
             coinTemplate = template;
             mouth = mouthAnchor;
             tray = trayAnchor;
             trayLight = light;
             winEffect = effect;
+            coinClip = clip;
         }
 
         void Awake()
@@ -75,6 +84,13 @@ namespace NHNAI.Game.Slot
             // 죽이는데, 트레이 안에서 동전끼리 부딪히는 속도는 대부분 그 아래다.
             // 값의 정본은 Coin.BounceThreshold — 여기는 적용만 한다.
             Physics.bounceThreshold = Coin.BounceThreshold;
+
+            // 배출음 스피커. 배출구에 붙여야 소리가 트레이 쪽에서 난다.
+            // PlayOneShot 전용이라 소스 하나로도 소리가 겹쳐 쌓인다 — 끊고 다시 틀지 않는다.
+            var speaker = mouth != null ? mouth.gameObject : gameObject;
+            _audio = speaker.AddComponent<AudioSource>();
+            _audio.playOnAwake = false;
+            _audio.spatialBlend = 1f;   // 3D — 기계 위치에서 들려온다
         }
 
         void Update()
@@ -121,6 +137,9 @@ namespace NHNAI.Game.Slot
             }
 
             if (go.TryGetComponent<Coin>(out var coin)) _spawned.Add(coin);
+
+            // 스폰 1 = 사운드 1. 펄스와 같은 원칙이라 "소리 수 = 동전 수" 가 어긋날 길이 없다.
+            if (coinClip != null) _audio.PlayOneShot(coinClip, coinVolume);
         }
 
         void TickLight(float deltaTime)
