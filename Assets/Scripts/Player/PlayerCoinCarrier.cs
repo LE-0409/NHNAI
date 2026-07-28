@@ -169,6 +169,12 @@ namespace NHNAI.Game.Player
 
         void BeginInsert()
         {
+            // 앞 동전이 아직 날아가는 중이면 즉시 완결한다. 흡입이 시작된 동전의
+            // 적립은 이미 확정이라 미룰 의미가 없고, 완결하지 않으면 아래 대입이
+            // _inserting 을 덮어써 앞 동전이 비물리 상태로 슬릿 앞 허공에 영영
+            // 남는다 — 투입구 앞에서 Q 연타(0.28초 안에 재흡입)로 재현되던 버그.
+            if (_inserting != null) FinishInsert();
+
             _inserting = _held;
             _held = null;
             _insertTimer = 0f;
@@ -196,6 +202,13 @@ namespace NHNAI.Game.Player
 
             if (t < 1f) return;
 
+            FinishInsert();
+        }
+
+        // 흡입 완결 — 투입음 · 크레딧 적립 · 동전 파괴. TickInsert 의 정상 종료와
+        // BeginInsert 의 앞 동전 즉시 완결이 같은 경로를 타야 적립이 안 새어 나간다.
+        void FinishInsert()
+        {
             if (insertClip != null) _slotAudio.PlayOneShot(insertClip, insertVolume);
             if (slotView != null) slotView.InsertCoin();
             Destroy(_inserting.gameObject);

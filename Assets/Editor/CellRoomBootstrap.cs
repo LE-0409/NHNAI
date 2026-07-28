@@ -146,14 +146,17 @@ namespace NHNAI.EditorTools
             // 붙이면 레버를 조준할 때 앞을 가로막는다. 레버는 아래에서 따로 붙인다.
             // LeverHub 는 레버 뿌리를 감싸는 통이라 콜라이더를 주면 레버를 노린
             // 레이를 대신 받아 조준이 먹통이 된다 — 보이기만 하면 되는 부품이다.
-            // CoinSlot·PayoutMouth 는 **일부러 막는다** (skip 에 없다).
+            // CoinSlot·PayoutMouth 는 skip 한다 — 동전이 간신히 드나드는 크기의 오목한
+            // 골이라 MeshCollider 를 그대로 씌우면 떨어뜨린 동전이 골에 파고들어 낀다
+            // (Q 바꿔 들기를 투입구 앞에서 하면 재현). SealSlitCollider 가 골 입구를
+            // 막은 BoxCollider 를 따로 씌운다.
             // CoinTray 는 skip 한다 — 시각 메시(두께 1.5 cm)에 MeshCollider 를 씌우면
             // 동전 더미의 겹침 밀치기가 바닥을 관통시킨다. BuildTrayColliders 가
             // 안쪽 면은 같고 두께만 두꺼운 BoxCollider 그릇을 따로 만든다.
             // RefundButton 은 아래에서 조준 전용 트리거를 따로 받는다.
             AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
                              "Lever", "LeverHub", "ReelGlass", "ReelBacklight", "RefundButton",
-                             "CoinTray");
+                             "CoinTray", "CoinSlot", "PayoutMouth");
             return WireSlotMachine(machine);
         }
 
@@ -298,6 +301,10 @@ namespace NHNAI.EditorTools
             // 트레이 물리 그릇. AddMeshColliders 가 CoinTray 를 skip 한 자리를 채운다.
             if (rig.CoinTray != null) BuildTrayColliders(rig.CoinTray);
 
+            // 투입구·배출구 슬릿 뚜껑. AddMeshColliders 가 둘을 skip 한 자리를 채운다.
+            if (rig.CoinSlot != null) SealSlitCollider(rig.CoinSlot);
+            if (rig.PayoutMouth != null) SealSlitCollider(rig.PayoutMouth);
+
             return rig;
         }
 
@@ -348,6 +355,30 @@ namespace NHNAI.EditorTools
             var box = go.AddComponent<BoxCollider>();
             box.center = center;
             box.size = size;
+        }
+
+        /// <summary>
+        /// 슬릿 부품(투입구·배출구)의 물리 뚜껑. 시각 메시는 동전이 간신히 드나드는
+        /// 크기의 오목한 골이라 non-convex MeshCollider 를 씌우면 떨어뜨린 동전이
+        /// 골에 파고들어 낀다. 물리 동전이 골 안에 들어갈 정당한 경로는 없다 —
+        /// 투입은 흡입 스크립트가 비물리 상태(콜라이더 꺼짐)로 통과시키고, 배출은
+        /// 개구 앞 5 cm 에서 스폰한다. 그래서 메시 AABB 그대로의 BoxCollider 로
+        /// 골 입구를 막는다. 두 블록 다 직육면체라 겉보기 실루엣과 어긋나는 곳은
+        /// 슬릿 입구뿐이고, 조준 레이가 맞는 실루엣도 그대로다.
+        /// </summary>
+        static void SealSlitCollider(Transform part)
+        {
+            var filter = part.GetComponent<MeshFilter>();
+            if (filter == null || filter.sharedMesh == null)
+            {
+                Debug.LogError($"[NHNAI] {part.name} 에 메시가 없어 슬릿 뚜껑 콜라이더를 못 씌운다.");
+                return;
+            }
+
+            var bounds = filter.sharedMesh.bounds;
+            var box = part.gameObject.AddComponent<BoxCollider>();
+            box.center = bounds.center;
+            box.size = bounds.size;
         }
 
         /// <summary>동전 앵커 오브젝트. 원점이 곧 앵커라 Transform 만 있으면 된다.</summary>
