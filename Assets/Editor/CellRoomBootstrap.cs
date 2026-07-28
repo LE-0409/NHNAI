@@ -144,11 +144,14 @@ namespace NHNAI.EditorTools
             // 붙이면 레버를 조준할 때 앞을 가로막는다. 레버는 아래에서 따로 붙인다.
             // LeverHub 는 레버 뿌리를 감싸는 통이라 콜라이더를 주면 레버를 노린
             // 레이를 대신 받아 조준이 먹통이 된다 — 보이기만 하면 되는 부품이다.
-            // CoinSlot·CoinTray·PayoutMouth 는 **일부러 막는다** (skip 에 없다) —
-            // 특히 트레이는 non-convex MeshCollider 라야 오목한 안쪽에 동전이 담긴다.
+            // CoinSlot·PayoutMouth 는 **일부러 막는다** (skip 에 없다).
+            // CoinTray 는 skip 한다 — 시각 메시(두께 1.5 cm)에 MeshCollider 를 씌우면
+            // 동전 더미의 겹침 밀치기가 바닥을 관통시킨다. BuildTrayColliders 가
+            // 안쪽 면은 같고 두께만 두꺼운 BoxCollider 그릇을 따로 만든다.
             // RefundButton 은 아래에서 조준 전용 트리거를 따로 받는다.
             AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
-                             "Lever", "LeverHub", "ReelGlass", "ReelBacklight", "RefundButton");
+                             "Lever", "LeverHub", "ReelGlass", "ReelBacklight", "RefundButton",
+                             "CoinTray");
             return WireSlotMachine(machine);
         }
 
@@ -285,7 +288,59 @@ namespace NHNAI.EditorTools
                 refundButton.gameObject.AddComponent<SlotMachineRefundButton>().Bind(view);
             }
 
+            // 트레이 물리 그릇. AddMeshColliders 가 CoinTray 를 skip 한 자리를 채운다.
+            if (rig.CoinTray != null) BuildTrayColliders(rig.CoinTray);
+
             return rig;
+        }
+
+        /// <summary>
+        /// 트레이의 물리 그릇. 시각 메시(generate_slot_machine.py, 두께 1.5 cm)에
+        /// MeshCollider 를 그대로 씌우면 두 가지가 터진다:
+        /// ① 소나기로 쌓인 동전 더미의 겹침 해소(depenetration)가 한 스텝에 바닥
+        ///    두께 이상을 밀어내 동전이 바닥 밑으로 빠진다.
+        /// ② non-convex MeshCollider 는 삼각형 표면 판정뿐이라, 일단 바닥 슬래브
+        ///    '안'에 들어간 동전은 어느 쪽으로 밀려날지 보장이 없어 바닥 속에 갇혀 떤다.
+        /// 그래서 물리만 두꺼운 BoxCollider 로 짠다. 동전이 닿는 안쪽 면과 벽 윗면은
+        /// 시각 메시와 정확히 일치시키고(넘침 연출 유지), 두께는 아래로만 키운다 —
+        /// 겉보기와 조준 실루엣은 그대로다. Box 는 부피 판정이라 ②도 함께 사라진다.
+        /// </summary>
+        static void BuildTrayColliders(Transform tray)
+        {
+            // generate_slot_machine.py 의 TRAY_* 와 같은 값. 트레이 로컬 좌표계:
+            // 원점 = 안쪽 바닥 중앙, +z = 플레이어 쪽(앞벽), -z 끝 = 캐비닛 앞면(뒷벽 겸용).
+            const float W = 0.36f;       // 바깥 폭 (TRAY_W)
+            const float D = 0.16f;       // 안쪽 깊이 (TRAY_D) — 캐비닛 앞면 ~ 앞벽 안쪽 면
+            const float T = 0.015f;      // 시각 벽 두께 (TRAY_T) — 벽 콜라이더는 이대로
+            const float WallH = 0.075f;  // 안쪽 바닥 기준 벽 높이 (TRAY_WALL) — 넘침 연출 유지
+            // 물리 바닥 두께. Coin.MaxDepenetrationVelocity 상한(스텝당 1 cm)으로는
+            // 못 넘는 여유이면서, 시각 바닥(1.5 cm) + 받침(y −0.04 까지)에 거의 감춰진다.
+            const float FloorThick = 0.05f;
+
+            var physics = new GameObject("TrayPhysics");
+            physics.transform.SetParent(tray, false);
+
+            // 바닥 — 윗면(y=0)은 시각 바닥과 같고 아래로만 두껍다. 뒤로 2 cm 는
+            // 캐비닛 속에 잠겨 캐비닛 앞면 콜라이더와의 틈새를 막는다.
+            AddBox(physics, new Vector3(0f, -FloorThick / 2f, -0.0025f),
+                            new Vector3(W, FloorThick, D + T + 0.02f));
+            // 앞벽 — 안쪽 면 z = D/2. 위는 시각과 같은 높이, 아래는 바닥 박스와 겹쳐
+            // 이음매 틈을 없앤다.
+            AddBox(physics, new Vector3(0f, (WallH - FloorThick) / 2f, (D + T) / 2f),
+                            new Vector3(W, WallH + FloorThick, T));
+            // 옆벽 좌·우 — 안쪽 면 x = ±(W/2 − T). 앞벽 바깥면(z = D/2 + T)까지 이어
+            // 모서리 틈을 없앤다. 시각적으로도 그 구간은 앞벽이 차지하고 있다.
+            AddBox(physics, new Vector3(-(W - T) / 2f, (WallH - FloorThick) / 2f, T / 2f),
+                            new Vector3(T, WallH + FloorThick, D + T));
+            AddBox(physics, new Vector3((W - T) / 2f, (WallH - FloorThick) / 2f, T / 2f),
+                            new Vector3(T, WallH + FloorThick, D + T));
+        }
+
+        static void AddBox(GameObject go, Vector3 center, Vector3 size)
+        {
+            var box = go.AddComponent<BoxCollider>();
+            box.center = center;
+            box.size = size;
         }
 
         /// <summary>동전 앵커 오브젝트. 원점이 곧 앵커라 Transform 만 있으면 된다.</summary>
@@ -571,6 +626,9 @@ namespace NHNAI.EditorTools
             body.mass = Coin.Mass;
             // 얇고 작고 빠르다 — 이산 판정이면 트레이 바닥을 뚫는 프레임이 나온다.
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            // CCD 는 '날아가다 뚫는 것' 만 막는다. 더미로 쌓여 겹친 동전을 솔버가
+            // 밀쳐낼 때의 순간이동은 이 상한이 막는다 — 값의 근거는 Coin 쪽 주석.
+            body.maxDepenetrationVelocity = Coin.MaxDepenetrationVelocity;
             // 코앞에서 들여다보는 오브젝트라 물리 스텝(50 Hz)과 렌더 프레임 사이
             // 계단 현상이 보인다. 보간으로 잇는다.
             body.interpolation = RigidbodyInterpolation.Interpolate;

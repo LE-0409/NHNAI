@@ -39,6 +39,12 @@ namespace NHNAI.Game.Coins
         /// CoinDispenser 가 Awake 에서 Physics.bounceThreshold 에 적용한다.
         /// </summary>
         public const float BounceThreshold = 0.4f;
+        /// <summary>
+        /// 겹침 해소 속도 상한(m/s). 기본 10 은 한 물리 스텝(0.02 s)에 20 cm 를 밀어낸다 —
+        /// 소나기로 트레이에 쌓인 동전 더미가 서로를 벽·바닥 너머로 사출하던 원인.
+        /// 0.5 면 스텝당 1 cm 라 트레이 벽 두께(1.5 cm)를 한 번에 못 넘는다.
+        /// </summary>
+        public const float MaxDepenetrationVelocity = 0.5f;
 
         [Header("부품 — 부트스트랩이 템플릿에 채우고, 복제가 물려받는다")]
         [Tooltip("잡기를 받아 주는 캐리어. 카메라에 붙어 있다")]
