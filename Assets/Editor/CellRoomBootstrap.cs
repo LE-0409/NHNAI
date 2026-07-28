@@ -159,14 +159,27 @@ namespace NHNAI.EditorTools
 
             var view = machine.AddComponent<SlotMachineView>();
 
-            // 성공 연출은 광원 둘과 흔들 대상을 쥔다. 흔드는 것은 기계 루트라
-            // 릴·레버·광원이 전부 같이 떤다 — 캐비닛만 떨면 부품이 공중에 남는다.
+            // 당첨 연출·배출기·전원은 서로 참조가 얽혀 있다 — 셋을 먼저 만들고
+            // 배선은 한꺼번에 한다. 흔드는 것은 기계 루트라 릴·레버·광원이 전부
+            // 같이 떤다 — 캐비닛만 떨면 부품이 공중에 남는다.
             var effect = machine.AddComponent<SlotMachineWinEffect>();
-            effect.Bind(BuildWinLight(machine.transform),
-                        BuildReelBacklight(machine.transform),
-                        machine.transform);
+            var dispenser = machine.AddComponent<CoinDispenser>();
+            var power = machine.AddComponent<SlotMachinePower>();
 
-            view.Bind(reels, lever, effect);
+            var winLight = BuildWinLight(machine.transform);
+            var reelLight = BuildReelBacklight(machine.transform);
+
+            // 발광 패널의 소등은 전원 상태가 런타임 인스턴스로 처리한다. 렌더러만 넘긴다.
+            var backlight = FindChild(machine.transform, "ReelBacklight");
+            if (backlight == null)
+                Debug.LogError("[NHNAI] SlotMachine.fbx 에 ReelBacklight 가 없다. 전원 소등이 패널을 못 끈다.");
+
+            effect.Bind(winLight, reelLight, machine.transform, power);
+            power.Bind(view, reelLight,
+                       backlight != null ? backlight.GetComponent<Renderer>() : null,
+                       dispenser, effect);
+            view.Bind(reels, lever, effect, dispenser);
+            // dispenser 의 앵커·템플릿·트레이 조명은 BuildCoins 단계가 꽂는다.
 
             // 레이캐스트로 잡으려면 Collider 가 있어야 하고, Interactable 과 **같은
             // 오브젝트**에 있어야 한다. FBX 임포트는 Collider 를 만들어 주지 않는다.
@@ -241,11 +254,11 @@ namespace NHNAI.EditorTools
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
             light.color = Color.white;
-            light.intensity = 1.6f;
+            // 꺼진 채 시작한다 — 게임은 크레딧 0 으로 열리고, 기계는 죽어 있어야 한다.
+            // '쉴 때' 세기의 정본은 SlotMachinePower.reelRestIntensity 다. 여기 아니다.
+            light.intensity = 0f;
             light.range = 0.75f;          // 창 밖으로 새어 방을 밝히지 않을 만큼만
             light.shadows = LightShadows.None;
-            // 이 세기가 '쉴 때' 값이다. 성공 연출이 Awake 에서 기억해 두고 그 위로 올린 뒤
-            // 되돌린다 — 여기 값을 바꾸면 연출의 최대 밝기도 배수만큼 같이 움직인다.
             return light;
         }
 

@@ -18,8 +18,10 @@ namespace NHNAI.Game.Slot
         [Tooltip("Reel_0 · Reel_1 · Reel_2 순서. 부트스트랩이 채운다")]
         [SerializeField] Transform[] reels = new Transform[SlotMachine.ReelCount];
         [SerializeField] Transform lever;
-        [Tooltip("성공 연출. 없어도 릴은 돈다")]
+        [Tooltip("당첨 연출. 없어도 릴은 돈다")]
         [SerializeField] SlotMachineWinEffect winEffect;
+        [Tooltip("당첨 동전을 뱉는 배출기. 없어도 릴은 돈다")]
+        [SerializeField] CoinDispenser dispenser;
 
         [Header("레버 연출")]
         [Tooltip("당겼을 때 레버가 도는 각도(도, 로컬 X). 반대로 꺾이면 부호를 뒤집는다")]
@@ -55,12 +57,17 @@ namespace NHNAI.Game.Slot
         {
             var dt = Time.deltaTime;
 
-            // 성공은 **마지막 릴이 멈추는 순간** 한 번만 터져야 한다. Phase 를 매 프레임
+            // 당첨은 **마지막 릴이 멈추는 순간** 한 번만 터져야 한다. Phase 를 매 프레임
             // 확인해 Done 이면 부르는 식으로 짜면 멈춘 내내 다시 켜진다.
             var wasSpinning = _machine.State == SlotMachine.Phase.Spinning;
             _machine.Tick(dt);
-            if (wasSpinning && _machine.State == SlotMachine.Phase.Done && winEffect != null)
-                winEffect.Play(_machine.Result);
+            if (wasSpinning && _machine.State == SlotMachine.Phase.Done)
+            {
+                if (winEffect != null) winEffect.OnSpinEnd(_machine.Result);
+                // 빛의 펄스는 여기서 내지 않는다 — 배출기가 동전 하나당 하나씩 낸다.
+                var payout = SlotMachine.PayoutOf(_machine.Result);
+                if (payout > 0 && dispenser != null) dispenser.Dispense(payout);
+            }
 
             for (var i = 0; i < reels.Length; i++)
             {
@@ -106,11 +113,12 @@ namespace NHNAI.Game.Slot
 
         /// <summary>부트스트랩이 FBX 계층에서 찾은 부품을 꽂아 준다.</summary>
         public void Bind(Transform[] reelTransforms, Transform leverTransform,
-                         SlotMachineWinEffect effect)
+                         SlotMachineWinEffect effect, CoinDispenser coinDispenser)
         {
             reels = reelTransforms;
             lever = leverTransform;
             winEffect = effect;
+            dispenser = coinDispenser;
         }
     }
 }
