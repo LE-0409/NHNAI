@@ -43,8 +43,9 @@ from mathutils import Vector
 from lowpoly_lib import builders, export, palette, paths, preview
 
 # --- 치수 --------------------------------------------------------------------
-# 슬롯머신 투입구(generate_slot_machine.py 의 CoinSlot)는 0.09 x 0.025 다.
-# 지름과 두께가 그 안에 들어가야 '넣는' 연출이 성립한다 — 아래 검사에서 확인한다.
+# 슬롯머신 투입구(generate_slot_machine.py 의 CoinSlot)는 세로 슬릿 0.012 x 0.070 이다.
+# 동전이 **세로로 서서** 들어가므로 두께 < 슬릿 폭, 지름 < 슬릿 높이여야
+# '넣는' 연출이 성립한다 — 아래 검사에서 확인한다.
 R = 0.030          # 반지름 (지름 6 cm). 실제 주화보다 크다 — 어두운 방에서 손에 들려도 읽혀야 한다
 T = 0.007          # 두께. 지름 대비 0.12. 더 얇게 가면 옆면이 조명을 못 받아 실루엣이 종잇장이 된다
 N = 12             # 옆면 분할. **각이 보여야 한다** — 16 이상은 원통으로 읽혀 로우폴리 톤에서 뜬다
@@ -143,7 +144,7 @@ export.export_static([coin], paths.art("Environment", "Coin.fbx"))
 print("EXPORTED Coin")
 
 # --- 검사 --------------------------------------------------------------------
-SLOT_W, SLOT_H = 0.09, 0.025   # generate_slot_machine.py 의 CoinSlot 크기
+SLIT_W, SLIT_H = 0.012, 0.070   # generate_slot_machine.py 의 투입 슬릿 크기 복사본
 print("--- 동전 제원 ---")
 print(f"  지름 · 두께   : {R * 2:.3f} x {T:.3f} m")
 print(f"  림 · 파임     : 폭 {RIM_W * 1000:.1f} mm · 깊이 {RECESS_D * 1000:.2f} mm "
@@ -151,6 +152,6 @@ print(f"  림 · 파임     : 폭 {RIM_W * 1000:.1f} mm · 깊이 {RECESS_D * 10
 print(f"  버텍스 · 면   : {len(coin.data.vertices)} v / {len(coin.data.polygons)} f")
 zs = [v.co.z for v in coin.data.vertices]
 print(f"  로컬 Z 범위   : {min(zs):+.4f} ~ {max(zs):+.4f}  (중심 원점이면 대칭이어야 한다)")
-fits = R * 2 < SLOT_W and T < SLOT_H
-print(f"  투입구 통과   : {'OK' if fits else '⚠️ 안 들어간다'} "
-      f"(투입구 {SLOT_W:.3f} x {SLOT_H:.3f})")
+fits = T < SLIT_W and R * 2 < SLIT_H   # 세로 투입: 두께가 폭을, 지름이 높이를 통과
+print(f"  투입 슬릿 통과: {'OK' if fits else '⚠️ 안 들어간다'} "
+      f"(슬릿 {SLIT_W:.3f} x {SLIT_H:.3f})")

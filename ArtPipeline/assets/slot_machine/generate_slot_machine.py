@@ -3,15 +3,20 @@
 앤틱 업라이트 캐비닛. 아래에서 위로 받침 → 본체 → 조작대 → 릴 창 → 마퀴 순이고,
 오른쪽 옆에 레버가 붙는다. 전체 높이 약 1.72 m.
 
-**FBX 하나에 오브젝트 8개가 들어간다.** 움직이는 부품은 따로 나와야 Unity 가 돌릴 수 있고,
+**FBX 하나에 오브젝트 11개가 들어간다.** 움직이는 부품은 따로 나와야 Unity 가 돌릴 수 있고,
 레버는 위치를 다시 잡을 일이 잦아 뿌리를 감추는 허브까지 따로 뽑는다.
+동전 관련 부품은 고정이지만 **원점이 곧 Unity 의 앵커**라 따로 뽑는다 —
+합쳐 버리면 부트스트랩이 좌표를 손으로 옮겨 적어야 하고, 여기 치수를 바꿀 때마다 어긋난다.
 
     SlotMachine   캐비닛 전체 (고정). 원점 = 기계 바닥 중앙
     Reel_0/1/2    릴 드럼 3개.  원점 = 각자의 회전축
     LeverHub      레버 뿌리를 감추는 통 (고정). 원점 = 레버와 같은 회전축
     Lever         레버 팔 + 손잡이. 원점 = 허브 회전축
     ReelGlass     릴 창 유리 (M_Glass)
-    ReelBacklight 릴 뒤 발광 패널 (M_Emissive) — 기계는 처음부터 켜져 있다
+    ReelBacklight 릴 뒤 발광 패널 (M_Emissive) — 켜고 끄는 것은 Unity 의 전원 상태다
+    CoinSlot      동전 투입구 (고정). 원점 = 슬릿 입구 — 흡입 판정 앵커
+    CoinTray      배출 트레이 (고정). 원점 = 안쪽 바닥 중앙 — 트레이 조명 · 부근 판정 앵커
+    PayoutMouth   동전 배출구 (고정). 원점 = 개구 앞 — 배출 스폰 앵커
 
 **회전하는 부품은 원점이 회전축에 있어야 한다.** 다른 에셋처럼 트랜스폼을 정점에
 구워버리면 원점이 기계 바닥에 남아, 레버를 돌렸을 때 밑동을 축으로 휘둘러진다.
@@ -83,6 +88,15 @@ LEVER_KNOB_AT = LEVER_LEN + 0.05     # 축에서 손잡이 중심까지
 # 팔이 눕는 각도(도). 양수 = 플레이어 쪽(−Y). **뒤로 눕히지 않는다** —
 # 축을 앞으로 옮겨도 팔이 뒤로 누우면 손잡이 끝이 다시 캐비닛 뒤로 들어가 가린다.
 LEVER_TILT = 0.0
+
+# --- 동전 치수 계약 ----------------------------------------------------------
+# 투입 슬릿은 동전(generate_coin.py)이 세로로 서서 들어가는 구멍이다 —
+# 폭은 동전 두께보다, 높이는 지름보다 여유 있게 커야 한다.
+# ⚠️ 여기 값을 바꾸면 generate_coin.py 말미의 통과 검사 복사본도 같이 고친다.
+COIN_R = 0.030   # generate_coin.py 의 R 복사본. 말미 검산에만 쓴다
+COIN_T = 0.007   # generate_coin.py 의 T 복사본
+SLIT_W = 0.012   # 투입 슬릿 폭 (X) — 동전 두께 통과
+SLIT_H = 0.070   # 투입 슬릿 높이 (Z) — 동전 지름 통과
 
 # 심볼 8종. **실루엣만으로 구분한다** — 흑백 팔레트라 색으로 나눌 수 없고,
 # 직사각형끼리는 창 안에서 가로세로 비율 차이로만 갈려 결국 다 같아 보인다.
@@ -185,14 +199,12 @@ cabinet.append(builders.box("Plinth", (W + 0.04, D + 0.04, PLINTH_H),
                             loc=(0, 0, PLINTH_H / 2), color="charcoal"))
 cabinet.append(builders.box("Body", (W, D, BODY_H),
                             loc=(0, 0, PLINTH_H + BODY_H / 2), color="iron"))
-cabinet.append(builders.box("BodyPanel", (0.46, 0.02, 0.56),
-                            loc=(0, FRONT - 0.005, 0.54), color="charcoal"))
+# 몸통 아래쪽은 배출구(PayoutMouth, z≈0.34)와 트레이가 차지하므로 패널을 위로 밀어 올린다.
+cabinet.append(builders.box("BodyPanel", (0.46, 0.02, 0.40),
+                            loc=(0, FRONT - 0.005, 0.62), color="charcoal"))
 
-# --- 코인 트레이 · 투입구 ----------------------------------------------------
-cabinet.append(builders.box("CoinTray", (0.34, 0.12, 0.06),
-                            loc=(0, FRONT - 0.05, 0.22), color="ash"))
-cabinet.append(builders.box("CoinSlot", (0.09, 0.02, 0.025),
-                            loc=(0.19, FRONT - 0.008, BODY_TOP + 0.02), color="void"))
+# 코인 트레이 · 투입구 · 배출구는 캐비닛과 합치지 않는다 — 원점이 곧 Unity 앵커라
+# 별도 오브젝트로 뽑는다. 백라이트 다음의 「동전 부품」 절에서 만든다.
 
 # --- 조작대 -----------------------------------------------------------------
 cabinet.append(builders.box("ControlDeck", (W, 0.20, 0.06),
@@ -298,18 +310,117 @@ backlight = builders.box("ReelBacklight", (0.44, 0.015, WIN_H - 0.02),
                          loc=(0, D / 2 - 0.07, WIN_Z))
 palette.use_emissive_material(backlight)
 
+# --- 동전 투입구 (고정, 별도 오브젝트) ---------------------------------------
+# 조작대 오른쪽에 서는 세로 슬릿 블록. 원래는 앞면에 붙인 납작한 void 판이었는데,
+# 동전을 실제로 넣는 대상이 되면서 '구멍' 으로 읽히는 형태가 필요해졌다.
+# 앞면에는 자리가 없다 — 릴 창 베젤 하단(z 0.99~1.03)과 기운 조작대 윗면(~0.96)
+# 사이가 3 cm 뿐이라 지름 6 cm 동전이 설 슬릿이 못 들어간다. 그래서 앤틱 기계처럼
+# 조작대 위에 블록으로 세운다. 블록 아랫단은 기운 조작대에 박혀 바닥 틈이 없다.
+#
+# 불리언이 없으므로 기둥 2 + 캡 2 로 앞벽을 짜고 골 끝에 void 판을 세운다 —
+# 밝은(bone) 에스커천 가운데 4 cm 깊이의 검은 세로 골이 구멍으로 읽힌다.
+SLOT_X = 0.20                     # 버튼(x=0.15, r=0.028) 오른쪽. 겹치지 않는다
+SLOT_Y = -0.40                    # 조작대 앞쪽 절반 위
+SLOT_D = 0.05                     # 블록 깊이 (Y)
+ESC_W, ESC_H = 0.06, 0.11         # 에스커천(블록) 폭 · 높이
+SLOT_Z = 1.02                     # 블록 중심 높이
+SLIT_Z = SLOT_Z + 0.005           # 슬릿 중심. 위 캡을 얇게 — 시선이 투입 동선 쪽으로 쏠린다
+PILLAR_W = (ESC_W - SLIT_W) / 2
+CAP_BOT_H = (SLIT_Z - SLIT_H / 2) - (SLOT_Z - ESC_H / 2)
+CAP_TOP_H = (SLOT_Z + ESC_H / 2) - (SLIT_Z + SLIT_H / 2)
+slot_parts = [
+    builders.box("SlotPillar_L", (PILLAR_W, SLOT_D, ESC_H),
+                 loc=(SLOT_X - (SLIT_W + PILLAR_W) / 2, SLOT_Y, SLOT_Z), color="bone"),
+    builders.box("SlotPillar_R", (PILLAR_W, SLOT_D, ESC_H),
+                 loc=(SLOT_X + (SLIT_W + PILLAR_W) / 2, SLOT_Y, SLOT_Z), color="bone"),
+    builders.box("SlotCap_Bottom", (SLIT_W, SLOT_D, CAP_BOT_H),
+                 loc=(SLOT_X, SLOT_Y, SLOT_Z - (ESC_H - CAP_BOT_H) / 2), color="bone"),
+    builders.box("SlotCap_Top", (SLIT_W, SLOT_D, CAP_TOP_H),
+                 loc=(SLOT_X, SLOT_Y, SLOT_Z + (ESC_H - CAP_TOP_H) / 2), color="bone"),
+    # 골의 끝. 슬릿으로 들여다보면 이 어두운 면이 깊이를 만든다.
+    builders.box("SlotThroat", (SLIT_W, 0.006, SLIT_H),
+                 loc=(SLOT_X, SLOT_Y + SLOT_D / 2 - 0.003, SLIT_Z), color="void"),
+]
+coin_slot = builders.join_all(slot_parts, "CoinSlot")
+set_pivot(coin_slot, (SLOT_X, SLOT_Y - SLOT_D / 2, SLIT_Z))   # 원점 = 슬릿 입구
+
+# --- 배출 트레이 (고정, 별도 오브젝트) ---------------------------------------
+# 속이 찬 선반이었다. 동전이 실제로 떨어져 쌓이는 그릇이 되면서 바닥 + 벽 3면의
+# 오목한 형태로 다시 짠다 — 뒷벽은 캐비닛 앞면이 겸한다. 안쪽 바닥은 어두운
+# charcoal 이라 밝은 동전(paper·chalk)이 그릇 안에서 도드라진다.
+# 벽 높이는 동전 지름보다 높아 낙하 동전이 웬만해선 밖으로 안 튄다 —
+# 대박 100개가 넘쳐 흐르는 것은 의도된 연출이다.
+TRAY_W, TRAY_D = 0.36, 0.16       # 바깥 폭 · 깊이
+TRAY_T = 0.015                    # 바닥 · 벽 두께
+TRAY_WALL = 0.075                 # 안쪽 바닥 기준 벽 높이
+TRAY_FLOOR_TOP = 0.20             # 안쪽 바닥 z
+TRAY_Y = FRONT - TRAY_D / 2       # 트레이 중심 y. 뒤 가장자리가 캐비닛 앞면에 붙는다
+TRAY_WALL_H = TRAY_T + TRAY_WALL  # 벽 박스는 바닥 옆면까지 감싼다
+tray_parts = [
+    builders.box("TrayFloor", (TRAY_W, TRAY_D, TRAY_T),
+                 loc=(0, TRAY_Y, TRAY_FLOOR_TOP - TRAY_T / 2), color="charcoal"),
+    builders.box("TrayWall_Front", (TRAY_W, TRAY_T, TRAY_WALL_H),
+                 loc=(0, FRONT - TRAY_D - TRAY_T / 2,
+                      TRAY_FLOOR_TOP - TRAY_T + TRAY_WALL_H / 2), color="ash"),
+    builders.box("TrayWall_L", (TRAY_T, TRAY_D, TRAY_WALL_H),
+                 loc=(-(TRAY_W - TRAY_T) / 2, TRAY_Y,
+                      TRAY_FLOOR_TOP - TRAY_T + TRAY_WALL_H / 2), color="ash"),
+    builders.box("TrayWall_R", (TRAY_T, TRAY_D, TRAY_WALL_H),
+                 loc=((TRAY_W - TRAY_T) / 2, TRAY_Y,
+                      TRAY_FLOOR_TOP - TRAY_T + TRAY_WALL_H / 2), color="ash"),
+    # 받침 — 트레이가 몸체에서 그냥 튀어나오면 공중에 뜬 것처럼 보인다.
+    builders.box("TrayBracket", (0.32, 0.12, 0.025),
+                 loc=(0, FRONT - 0.06, TRAY_FLOOR_TOP - TRAY_T - 0.0125), color="charcoal"),
+]
+tray = builders.join_all(tray_parts, "CoinTray")
+set_pivot(tray, (0, TRAY_Y, TRAY_FLOOR_TOP))   # 원점 = 안쪽 바닥 중앙
+
+# --- 배출구 (고정, 별도 오브젝트) --------------------------------------------
+# 트레이 위 몸체 앞면의 가로 슬릿. 당첨 동전이 여기서 나와 트레이로 떨어진다.
+# 투입구와 같은 수법(기둥 + 캡 + void 골)이되, 동전이 눕다시피 미끄러져 나오는
+# 가로 구멍이다. 원점 = 개구 앞 — Unity 의 배출 스폰 앵커.
+MOUTH_Z = 0.335                   # 트레이 앞벽 상단(0.275)보다 위 — 낙하 궤적 확보
+MOUTH_W, MOUTH_H = 0.10, 0.024    # 개구 폭 · 높이 (동전 지름 0.060 · 두께 0.007)
+MOUTH_FRAME = 0.015               # 좌우 기둥 폭
+MOUTH_CAP = 0.0155                # 상하 캡 높이
+MOUTH_D = 0.012                   # 프레임의 앞면 돌출 깊이
+MOUTH_OUTER_H = MOUTH_H + MOUTH_CAP * 2
+mouth_parts = [
+    builders.box("MouthPillar_L", (MOUTH_FRAME, MOUTH_D, MOUTH_OUTER_H),
+                 loc=(-(MOUTH_W + MOUTH_FRAME) / 2, FRONT - MOUTH_D / 2, MOUTH_Z),
+                 color="bone"),
+    builders.box("MouthPillar_R", (MOUTH_FRAME, MOUTH_D, MOUTH_OUTER_H),
+                 loc=((MOUTH_W + MOUTH_FRAME) / 2, FRONT - MOUTH_D / 2, MOUTH_Z),
+                 color="bone"),
+    builders.box("MouthCap_Top", (MOUTH_W, MOUTH_D, MOUTH_CAP),
+                 loc=(0, FRONT - MOUTH_D / 2, MOUTH_Z + (MOUTH_H + MOUTH_CAP) / 2),
+                 color="bone"),
+    builders.box("MouthCap_Bottom", (MOUTH_W, MOUTH_D, MOUTH_CAP),
+                 loc=(0, FRONT - MOUTH_D / 2, MOUTH_Z - (MOUTH_H + MOUTH_CAP) / 2),
+                 color="bone"),
+    builders.box("MouthThroat", (MOUTH_W, 0.004, MOUTH_H),
+                 loc=(0, FRONT - 0.003, MOUTH_Z), color="void"),
+]
+mouth = builders.join_all(mouth_parts, "PayoutMouth")
+set_pivot(mouth, (0, FRONT - 0.02, MOUTH_Z))   # 원점 = 개구 앞
+
 # --- 프리뷰 · 익스포트 -------------------------------------------------------
 # 유리를 숨긴다. Workbench 는 알파를 반영하지 않아 두면 불투명 판이 릴을 덮는다.
 glass.hide_render = True
-preview.render_turnaround("slot_machine", [machine] + reels + [hub, lever])
+preview.render_turnaround("slot_machine", [machine] + reels + [hub, lever, coin_slot, tray, mouth])
 # 심볼 클로즈업. 전체 렌더에서는 릴 창이 손톱만 해 형태가 구분되는지 알 수 없다.
 # 릴만 넘기면 프레이밍이 릴 크기로 좁혀진다 — 카메라 설정은 건드릴 게 없다.
 preview.render_turnaround("slot_machine_reels", reels,
                           out_dir=os.path.join(paths.PREVIEWS, "slot_machine"),
                           views={"front": Vector((0.0, -1.0, 0.0))})
+# 동전 부품 클로즈업. 전체 렌더에서는 슬릿과 트레이 오목함이 픽셀 몇 개라 검수가 안 된다.
+preview.render_turnaround("slot_machine_coinparts", [coin_slot, tray, mouth],
+                          out_dir=os.path.join(paths.PREVIEWS, "slot_machine"),
+                          views={"front": Vector((0.0, -1.0, 0.0)),
+                                 "persp34": Vector((-0.8, -1.0, 0.55))})
 glass.hide_render = False
 
-objs = [machine] + reels + [hub, lever, glass, backlight]
+objs = [machine] + reels + [hub, lever, glass, backlight, coin_slot, tray, mouth]
 export.export_static(objs, paths.art("Environment", "SlotMachine.fbx"))
 print("EXPORTED SlotMachine")
 
@@ -318,3 +429,26 @@ for o in objs:
     print(f"  {o.name:<14} origin = ({o.location.x:.3f}, {o.location.y:.3f}, {o.location.z:.3f})")
 print(f"  릴 심볼 수 = {REEL_N} (SlotMachine.cs 의 SymbolCount 와 같아야 한다)")
 print(f"  무늬 배열 = {', '.join(name for name, _ in SYMBOLS)}  ← 세 릴 공통")
+
+print("--- 동전 앵커 (Unity 로컬 = 블렌더 (x, z, -y)) ---")
+for o in (coin_slot, tray, mouth):
+    print(f"  {o.name:<12} unity = ({o.location.x:.3f}, {o.location.z:.3f}, {-o.location.y:.3f})")
+
+# 투입 슬릿 통과 검산 — generate_coin.py 말미의 검사와 같은 식이어야 한다.
+ok_slit = COIN_T < SLIT_W and 2 * COIN_R < SLIT_H
+print(f"  투입 슬릿 {SLIT_W}x{SLIT_H}: 동전(지름 {2 * COIN_R}, 두께 {COIN_T}) "
+      f"통과 {'OK' if ok_slit else 'FAIL'}")
+
+# 배출 궤적 검산 — 개구 앞 5 cm 에서 전방 0.3 m/s 로 나온 동전이 트레이 안에 떨어지는가.
+# 0.3 은 Unity 쪽 CoinDispenser.ejectSpeed 와 같은 값이다.
+EJECT_SPEED = 0.30
+drop = MOUTH_Z - TRAY_FLOOR_TOP
+t_fall = math.sqrt(2 * drop / 9.81)
+land_y = mouth.location.y - 0.05 - EJECT_SPEED * t_fall
+ok_land = (FRONT - TRAY_D + COIN_R) < land_y < (FRONT - COIN_R)
+print(f"  배출 낙하: 개구 z={MOUTH_Z} → 트레이 바닥 z={TRAY_FLOOR_TOP}, "
+      f"착지 y={land_y:.3f} (트레이 안쪽 {FRONT - TRAY_D:.3f}~{FRONT:.2f}) "
+      f"{'OK' if ok_land else 'FAIL'}")
+
+if not (ok_slit and ok_land):
+    raise SystemExit("동전 기하 검산 실패 — 위 FAIL 항목의 치수를 맞추고 다시 돌린다")
