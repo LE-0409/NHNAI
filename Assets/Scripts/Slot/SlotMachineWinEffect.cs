@@ -8,9 +8,11 @@ namespace NHNAI.Game.Slot
     /// 팔레트가 완전 흑백이라 색으로는 강조할 수 없다. 남은 신호는 밝기와 움직임뿐인데,
     /// 방이 어둡고 광원이 전등 하나라 기계에서 나온 빛은 벽·바닥까지 그대로 드러난다.
     ///
-    /// 번쩍임의 단위는 **동전**이다. 당첨 등급마다 고정 횟수를 치던 예전 방식을 버리고,
-    /// <see cref="CoinDispenser"/> 가 동전을 하나 뱉을 때마다 <see cref="FlashCoin"/> 을
-    /// 불러 펄스를 하나 낸다 — 번쩍임 수 = 배출 동전 수가 구조적으로 보장된다.
+    /// 번쩍임의 단위는 **딴 동전**이다. 당첨 등급마다 고정 횟수를 치던 예전 방식을 버리고,
+    /// <see cref="CoinDispenser"/> 가 당첨 동전을 하나 뱉을 때마다 <see cref="FlashCoin"/> 을
+    /// 불러 펄스를 하나 낸다 — 번쩍임 수 = 딴 동전 수가 구조적으로 보장된다.
+    /// 환불 동전은 같은 출구로 나오지만 여기를 부르지 않는다 (<see cref="CoinDispenser.Refund"/>) —
+    /// 되찾는 돈까지 번쩍이면 번쩍임이 "땄다" 는 뜻을 잃는다.
     /// 큰 성공(100개)은 펄스 100번이 이어져 10초짜리 빛의 소나기가 된다.
     /// 기계 진동만 스핀이 멎는 순간(<see cref="OnSpinEnd"/>) 한 번 친다.
     ///
@@ -100,8 +102,9 @@ namespace NHNAI.Game.Slot
             if (result == SlotMachine.Win.Big && shakeTarget != null) _shakeTimer = 0f;
         }
 
-        /// <summary><see cref="CoinDispenser"/> 가 동전 하나를 뱉을 때마다 부른다.
-        /// 진행 중인 펄스는 처음부터 다시 — 배출 간격과 맞물려 연속 펄스가 된다.</summary>
+        /// <summary><see cref="CoinDispenser"/> 가 **당첨** 동전 하나를 뱉을 때마다 부른다.
+        /// 환불 동전은 부르지 않는다. 진행 중인 펄스는 처음부터 다시 —
+        /// 배출 간격과 맞물려 연속 펄스가 된다.</summary>
         public void FlashCoin() => _flashTimer = 0f;
 
         /// <summary>징글이 흐르는 동안 <see cref="SlotMachineView"/> 가 잡아 둔다.

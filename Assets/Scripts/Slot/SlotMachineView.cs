@@ -138,11 +138,15 @@ namespace NHNAI.Game.Slot
                               && _machine.Credits > 0 && !IsSpinning
                               && _leverTimer < 0f && _winWait < 0f;
 
-        /// <summary>넣어 둔 동전을 전부 되뱉는다. 배출 경로는 당첨과 같다 — 기계의 출구는 하나다.</summary>
+        /// <summary>
+        /// 넣어 둔 동전을 전부 되뱉는다. 배출 경로는 당첨과 같다 — 기계의 출구는 하나다.
+        /// 다만 <see cref="CoinDispenser.Refund"/> 로 넘겨 **빛은 달지 않는다** —
+        /// 내가 넣은 것을 도로 꺼내는 일은 사건이 아니다. 번쩍임은 딴 돈의 신호로 남는다.
+        /// </summary>
         public void Refund()
         {
             if (!CanRefund) return;
-            dispenser.Dispense(_machine.TakeAllCredits());
+            dispenser.Refund(_machine.TakeAllCredits());
         }
 
         void Awake()
