@@ -13,6 +13,10 @@ namespace NHNAI.Game.Player
     /// 투입에 별도 클릭이 없는 것은 의도다: 잡은 동전의 용도가 하나뿐이라
     /// '가져가면 넣어진다' 가 가장 짧은 동선이다.
     ///
+    /// 인벤토리(<see cref="PlayerCoinInventory"/>)는 이 손을 거쳐 간다 — 넣기는
+    /// <see cref="TakeHeld"/> 로 손을 비우고, 꺼내기는 <see cref="TryPickUp"/> 을
+    /// 그대로 태워 마우스로 잡았을 때와 같은 들기 상태를 만든다.
+    ///
     /// 드는 동안 <see cref="PlayerInteractor"/> 를 통째로 끈다. 켜 두면 클릭 하나가
     /// '레버 당기기' 와 '동전 놓기' 로 갈라져 어느 쪽이 먹었는지 화면만 봐서는 알 수 없다.
     /// 끄면 조준점 강조도 같이 풀려(인터랙터의 OnDisable 정리) 상태가 화면과 일치한다.
@@ -70,6 +74,12 @@ namespace NHNAI.Game.Player
         AudioSource _slotAudio;
 
         public bool IsCarrying => _held != null;
+
+        /// <summary>손 위치(월드). 인벤토리에서 꺼낸 동전을 이 위치로 순간이동시킨다.</summary>
+        public Vector3 HandPosition => transform.TransformPoint(holdOffset);
+
+        /// <summary>들린 동전의 자세 — 면(로컬 Y)이 카메라를 본다. LateUpdate 의 추적 목표와 같다.</summary>
+        public Quaternion HandRotation => Quaternion.LookRotation(transform.up, -transform.forward);
 
         /// <summary>부트스트랩이 씬에서 만든 부품을 꽂아 준다.</summary>
         public void Bind(PlayerInteractor playerInteractor, SlotMachineView view, Transform intake,
@@ -132,7 +142,7 @@ namespace NHNAI.Game.Player
         {
             if (_held == null) return;
 
-            var target = transform.TransformPoint(holdOffset);
+            var target = HandPosition;
 
             // 벽에 붙어 서면 손 위치가 벽 안이다. 시선 레이로 막힌 만큼 손을 당긴다 —
             // 안 하면 동전이 벽에 파묻힌 채 놓여 물리가 밀어내며 튄다.
@@ -192,8 +202,24 @@ namespace NHNAI.Game.Player
             _inserting = null;
         }
 
-        void Drop()
+        /// <summary>
+        /// 손의 동전을 물리로 되돌리지 않고 소유권째 회수한다 — 인벤토리 보관용.
+        /// 동전은 들린 상태(비물리) 그대로 넘어가므로 받는 쪽이 끄든 되살리든 정한다.
+        /// 들고 있지 않으면 null.
+        /// </summary>
+        public Coin TakeHeld()
         {
+            if (_held == null) return null;
+            var coin = _held;
+            _held = null;
+            if (interactor != null) interactor.enabled = true;
+            return coin;
+        }
+
+        /// <summary>들고 있는 동전을 발 앞에 떨어뜨린다. 인벤토리의 '바꿔 들기'도 이걸 쓴다.</summary>
+        public void Drop()
+        {
+            if (_held == null) return;
             var coin = _held;
             _held = null;
             if (interactor != null) interactor.enabled = true;

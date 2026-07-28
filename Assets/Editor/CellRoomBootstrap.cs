@@ -84,6 +84,7 @@ namespace NHNAI.EditorTools
             public PlayerInteractor Interactor;
             public Transform CameraTransform;
             public Collider Body;           // CharacterController — 동전과의 충돌 무시용
+            public HudScreen Hud;           // 인벤토리 개수가 여기 붙는다 (BuildCoins 단계)
         }
 
         [MenuItem("NHNAI/Scenes/독방 (CellRoom)", priority = 20)]
@@ -512,13 +513,14 @@ namespace NHNAI.EditorTools
 
             // 화면 중앙 조준 + 클릭. HUD 가 이 컴포넌트를 구독한다.
             var interactor = go.AddComponent<PlayerInteractor>();
-            BuildHud(interactor);
+            var hud = BuildHud(interactor);
 
             return new PlayerRig
             {
                 Interactor = interactor,
                 CameraTransform = go.transform,
                 Body = controller,
+                Hud = hud,
             };
         }
 
@@ -548,6 +550,11 @@ namespace NHNAI.EditorTools
             // 잡은 동전을 들고 다니는 손. 카메라에 붙는다 — holdOffset 이 카메라 로컬이다.
             var carrier = player.CameraTransform.gameObject.AddComponent<PlayerCoinCarrier>();
             carrier.Bind(player.Interactor, machine.View, machine.CoinSlot, pickupClip, insertClip);
+
+            // E/Q 로 동전을 넣고 꺼내는 인벤토리. 손과 같은 오브젝트에 산다.
+            var inventory = player.CameraTransform.gameObject.AddComponent<PlayerCoinInventory>();
+            inventory.Bind(carrier);
+            if (player.Hud != null) player.Hud.Bind(inventory);
 
             var physics = BuildCoinPhysicsMaterial();
 
@@ -637,13 +644,13 @@ namespace NHNAI.EditorTools
 
         // --- HUD --------------------------------------------------------------
 
-        static void BuildHud(PlayerInteractor interactor)
+        static HudScreen BuildHud(PlayerInteractor interactor)
         {
             var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudUxmlPath);
             if (uxml == null)
             {
                 Debug.LogError($"[NHNAI] HUD UXML 이 없다: {HudUxmlPath}");
-                return;
+                return null;
             }
 
             var go = new GameObject("Hud");
@@ -651,7 +658,9 @@ namespace NHNAI.EditorTools
             doc.panelSettings = UiBootstrap.Build();
             doc.visualTreeAsset = uxml;
 
-            go.AddComponent<HudScreen>().Bind(interactor);
+            var hud = go.AddComponent<HudScreen>();
+            hud.Bind(interactor);
+            return hud;
         }
 
         // --- 포스트 프로세싱 --------------------------------------------------
