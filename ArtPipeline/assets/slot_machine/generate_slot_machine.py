@@ -3,15 +3,17 @@
 앤틱 업라이트 캐비닛. 아래에서 위로 받침 → 본체 → 조작대 → 릴 창 → 마퀴 순이고,
 오른쪽 옆에 레버가 붙는다. 전체 높이 약 1.72 m.
 
-**FBX 하나에 오브젝트 11개가 들어간다.** 움직이는 부품은 따로 나와야 Unity 가 돌릴 수 있고,
+**FBX 하나에 오브젝트 12개가 들어간다.** 움직이는 부품은 따로 나와야 Unity 가 돌릴 수 있고,
 레버는 위치를 다시 잡을 일이 잦아 뿌리를 감추는 허브까지 따로 뽑는다.
 동전 관련 부품은 고정이지만 **원점이 곧 Unity 의 앵커**라 따로 뽑는다 —
 합쳐 버리면 부트스트랩이 좌표를 손으로 옮겨 적어야 하고, 여기 치수를 바꿀 때마다 어긋난다.
+환불 버튼도 상호작용(조준 콜라이더 · 누름 연출) 대상이라 따로 뽑는다.
 
     SlotMachine   캐비닛 전체 (고정). 원점 = 기계 바닥 중앙
     Reel_0/1/2    릴 드럼 3개.  원점 = 각자의 회전축
     LeverHub      레버 뿌리를 감추는 통 (고정). 원점 = 레버와 같은 회전축
     Lever         레버 팔 + 손잡이. 원점 = 허브 회전축
+    RefundButton  환불 버튼 (조작대 왼쪽). 원점 = 버튼 중심 — 조준 · 누름 연출 앵커
     ReelGlass     릴 창 유리 (M_Glass)
     ReelBacklight 릴 뒤 발광 패널 (M_Emissive) — 켜고 끄는 것은 Unity 의 전원 상태다
     CoinSlot      동전 투입구 (고정). 원점 = 슬릿 입구 — 흡입 판정 앵커
@@ -207,13 +209,16 @@ cabinet.append(builders.box("BodyPanel", (0.46, 0.02, 0.40),
 # 별도 오브젝트로 뽑는다. 백라이트 다음의 「동전 부품」 절에서 만든다.
 
 # --- 조작대 -----------------------------------------------------------------
-cabinet.append(builders.box("ControlDeck", (W, 0.20, 0.06),
-                            loc=(0, FRONT - 0.07, BODY_TOP - 0.01),
+# 깊이 0.14 — 버튼 셋이 늘어서던 때는 0.20 이었다. 남은 것은 환불 버튼 하나와
+# 투입구뿐이라 돌출을 줄인다. 여기를 바꾸면 그 위 부품(환불 버튼 · CoinSlot)의
+# y 도 같이 옮겨야 한다 — 셋 다 DECK_Y 기준으로 적는다.
+DECK_D = 0.14
+DECK_Y = FRONT - 0.04
+cabinet.append(builders.box("ControlDeck", (W, DECK_D, 0.06),
+                            loc=(0, DECK_Y, BODY_TOP - 0.01),
                             rot=(-14, 0, 0), color="ash"))
-for i, bx in enumerate((-0.15, 0.0, 0.15)):
-    cabinet.append(builders.prism(f"Button_{i}", 0.028, 0.028, n=8,
-                                  loc=(bx, FRONT - 0.07, BODY_TOP + 0.03),
-                                  color="concrete"))
+# 버튼은 환불 버튼 하나뿐이고 상호작용 대상이라 캐비닛과 합치지 않는다 —
+# 레버 다음의 「환불 버튼」 절에서 별도 오브젝트로 만든다.
 
 # --- 릴 창 프레임 (가운데를 비운다) ------------------------------------------
 cabinet.append(builders.box("Frame_Bottom", (W, D, FRAME_BOT),
@@ -300,6 +305,16 @@ lever_parts = [
 lever = builders.join_all(lever_parts, "Lever")
 set_pivot(lever, LEVER_HUB)
 
+# --- 환불 버튼 (조작대 왼쪽, 별도 오브젝트) ----------------------------------
+# 넣어 둔 크레딧을 전부 되뱉는 버튼. 조준 콜라이더와 누름 연출이 붙는 상호작용
+# 대상이라 캐비닛과 합치지 않는다. 원점 = 버튼 중심 — Unity 가 로컬로 눌러 내린다.
+# 자리는 조작대 중심선(DECK_Y). 기운 윗면에 밑동이 박혀 바닥 틈이 없다.
+BUTTON_POS = (-0.15, DECK_Y, BODY_TOP + 0.03)
+refund_button = builders.join_all(
+    [builders.prism("RefundButton", 0.028, 0.028, n=8, loc=BUTTON_POS, color="concrete")],
+    "RefundButton")
+set_pivot(refund_button, BUTTON_POS)
+
 # --- 유리 · 백라이트 ---------------------------------------------------------
 # 백라이트는 릴 **뒤**에 선다. 기계가 처음부터 켜져 있다는 인상이 여기서 나온다 —
 # 어두운 방에서 이 패널이 유일하게 스스로 빛나는 면이다.
@@ -319,8 +334,8 @@ palette.use_emissive_material(backlight)
 #
 # 불리언이 없으므로 기둥 2 + 캡 2 로 앞벽을 짜고 골 끝에 void 판을 세운다 —
 # 밝은(bone) 에스커천 가운데 4 cm 깊이의 검은 세로 골이 구멍으로 읽힌다.
-SLOT_X = 0.20                     # 버튼(x=0.15, r=0.028) 오른쪽. 겹치지 않는다
-SLOT_Y = -0.40                    # 조작대 앞쪽 절반 위
+SLOT_X = 0.20                     # 환불 버튼(x=-0.15)과 반대쪽 끝. 겹칠 일이 없다
+SLOT_Y = DECK_Y - 0.04            # 조작대 앞쪽 절반 위. 조작대가 얕아지면 같이 물러난다
 SLOT_D = 0.05                     # 블록 깊이 (Y)
 ESC_W, ESC_H = 0.06, 0.11         # 에스커천(블록) 폭 · 높이
 SLOT_Z = 1.02                     # 블록 중심 높이
@@ -407,7 +422,8 @@ set_pivot(mouth, (0, FRONT - 0.02, MOUTH_Z))   # 원점 = 개구 앞
 # --- 프리뷰 · 익스포트 -------------------------------------------------------
 # 유리를 숨긴다. Workbench 는 알파를 반영하지 않아 두면 불투명 판이 릴을 덮는다.
 glass.hide_render = True
-preview.render_turnaround("slot_machine", [machine] + reels + [hub, lever, coin_slot, tray, mouth])
+preview.render_turnaround("slot_machine",
+                          [machine] + reels + [hub, lever, refund_button, coin_slot, tray, mouth])
 # 심볼 클로즈업. 전체 렌더에서는 릴 창이 손톱만 해 형태가 구분되는지 알 수 없다.
 # 릴만 넘기면 프레이밍이 릴 크기로 좁혀진다 — 카메라 설정은 건드릴 게 없다.
 preview.render_turnaround("slot_machine_reels", reels,
@@ -420,7 +436,7 @@ preview.render_turnaround("slot_machine_coinparts", [coin_slot, tray, mouth],
                                  "persp34": Vector((-0.8, -1.0, 0.55))})
 glass.hide_render = False
 
-objs = [machine] + reels + [hub, lever, glass, backlight, coin_slot, tray, mouth]
+objs = [machine] + reels + [hub, lever, refund_button, glass, backlight, coin_slot, tray, mouth]
 export.export_static(objs, paths.art("Environment", "SlotMachine.fbx"))
 print("EXPORTED SlotMachine")
 
