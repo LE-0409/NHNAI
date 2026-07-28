@@ -59,7 +59,13 @@ namespace NHNAI.Game.Slot
 
         float _leverTimer = -1f;   // 음수 = 쉬는 중
 
-        public bool CanPull => _machine.CanPull && _leverTimer < 0f;
+        /// <summary>
+        /// 배출 중에는 당길 수 없다 — 당첨 동전이 쏟아지는 동안 다음 스핀이 겹치면
+        /// 앞 판의 소나기와 새 판의 릴 소리가 섞여 어느 판의 돈인지 읽을 수 없다.
+        /// 조준점 강조도 이 게이트를 그대로 따라 흐려진다.
+        /// </summary>
+        public bool CanPull => _machine.CanPull && _leverTimer < 0f
+                            && (dispenser == null || !dispenser.Dispensing);
 
         /// <summary>넣어 둔 동전 수. 전원 상태(SlotMachinePower)가 읽는다.</summary>
         public int Credits => _machine.Credits;
@@ -69,6 +75,21 @@ namespace NHNAI.Game.Slot
 
         /// <summary>캐리어가 흡입을 마친 동전을 크레딧으로 바꾼다.</summary>
         public void InsertCoin() => _machine.InsertCoin();
+
+        /// <summary>
+        /// 환불이 가능한가. 스핀 중에는 막는다 — 이미 크레딧 하나가 릴에 걸려 있어
+        /// '전부 돌려받았다' 는 인상과 실제 잔액이 어긋난다. 배출 중에도 막는다 —
+        /// 당첨 소나기에 환불 동전이 섞이면 딴 돈과 되찾은 돈이 구분되지 않는다.
+        /// </summary>
+        public bool CanRefund => dispenser != null && !dispenser.Dispensing
+                              && _machine.Credits > 0 && !IsSpinning;
+
+        /// <summary>넣어 둔 동전을 전부 되뱉는다. 배출 경로는 당첨과 같다 — 기계의 출구는 하나다.</summary>
+        public void Refund()
+        {
+            if (!CanRefund) return;
+            dispenser.Dispense(_machine.TakeAllCredits());
+        }
 
         void Awake()
         {

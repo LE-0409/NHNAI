@@ -143,8 +143,9 @@ namespace NHNAI.EditorTools
             // 레이를 대신 받아 조준이 먹통이 된다 — 보이기만 하면 되는 부품이다.
             // CoinSlot·CoinTray·PayoutMouth 는 **일부러 막는다** (skip 에 없다) —
             // 특히 트레이는 non-convex MeshCollider 라야 오목한 안쪽에 동전이 담긴다.
+            // RefundButton 은 아래에서 조준 전용 트리거를 따로 받는다.
             AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
-                             "Lever", "LeverHub", "ReelGlass", "ReelBacklight");
+                             "Lever", "LeverHub", "ReelGlass", "ReelBacklight", "RefundButton");
             return WireSlotMachine(machine);
         }
 
@@ -238,13 +239,36 @@ namespace NHNAI.EditorTools
             // 레버가 캐비닛 앞면(z=+0.26)보다 앞으로 나왔으므로 캡슐도 앞으로 튀어나온다.
             // 기계 오른쪽 끝 4 cm 쯤(창 오른쪽 프레임)을 조준하면 캐비닛 대신 레버가
             // 잡힌다. 그 자리엔 어차피 다른 상호작용이 없어서 손해가 아니라 이득이다.
+            //
+            // 트리거 = 조준 전용 (PlayerInteractor 의 규약). 실루엣보다 훨씬 큰 캡슐이라
+            // 물리에 남겨 두면 보이지 않는 벽이 된다 — 들고 있는 동전의 손 위치 보정
+            // 레이가 걸려 동전이 코앞으로 딸려 오고, 낙하 동전이 허공에 얹힌다.
+            // 조준 레이(Collide)만 이 캡슐을 보고, 물리와 손 보정 레이(Ignore)는 통과한다.
             var capsule = lever.gameObject.AddComponent<CapsuleCollider>();
             capsule.direction = 1;                                   // Y 축
             capsule.height = 0.42f;
             capsule.radius = 0.09f;
             capsule.center = new Vector3(0.01f, 0.15f, 0f);
+            capsule.isTrigger = true;
 
             lever.gameObject.AddComponent<SlotMachineLever>().Bind(view);
+
+            // 환불 버튼 — 조작대 왼쪽. 실물(반지름 0.028)보다 넉넉한 조준 박스를 씌운다.
+            // 레버와 같은 이유로 트리거다. 원점이 버튼 중심이라 center 는 거의 0 이다.
+            var refundButton = FindChild(machine.transform, "RefundButton");
+            if (refundButton == null)
+            {
+                Debug.LogError("[NHNAI] SlotMachine.fbx 에 RefundButton 이 없다. " +
+                               "ArtPipeline 의 generate_slot_machine.py 를 다시 돌려야 한다.");
+            }
+            else
+            {
+                var box = refundButton.gameObject.AddComponent<BoxCollider>();
+                box.size = new Vector3(0.10f, 0.06f, 0.10f);
+                box.center = new Vector3(0f, 0.01f, 0f);
+                box.isTrigger = true;
+                refundButton.gameObject.AddComponent<SlotMachineRefundButton>().Bind(view);
+            }
 
             return rig;
         }

@@ -82,6 +82,19 @@ namespace NHNAI.Game.Slot
         /// <summary>동전이 들어왔다. 도는 중에도 받는다 — 적립만 되고 스핀에는 다음에 쓴다.</summary>
         public void InsertCoin() => Credits++;
 
+        /// <summary>
+        /// 환불 — 남은 크레딧을 전부 꺼내 0 으로 만들고 개수를 돌려준다.
+        /// 실제로 동전을 뱉는 것은 호출자(뷰 → CoinDispenser) 몫이다.
+        /// 스핀 중 호출을 막는 게이트는 뷰(CanRefund)에 있다 — 규칙은 언제 꺼내든
+        /// '남은 만큼만' 이라는 산수만 책임진다.
+        /// </summary>
+        public int TakeAllCredits()
+        {
+            var taken = Credits;
+            Credits = 0;
+            return taken;
+        }
+
         public bool CanPull => State != Phase.Spinning && Credits > 0;
 
         /// <summary>결과에 따라 뱉을 동전 개수. 배출기가 이 값만큼 스폰한다.</summary>

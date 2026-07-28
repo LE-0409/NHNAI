@@ -10,6 +10,11 @@ namespace NHNAI.Game.Player
     /// 조준 상태는 <see cref="TargetChanged"/> 로 내보낸다. HUD 를 직접 부르지 않는 이유는
     /// 어셈블리 방향 때문이다 — NHNAI.UI 가 NHNAI.Game 을 참조하지 그 반대가 아니다.
     /// 그래서 UI 가 이 이벤트를 구독한다.
+    ///
+    /// **트리거 콜라이더 = 조준 전용** 이 이 프로젝트의 규약이다. 레버·환불 버튼처럼
+    /// 실루엣보다 넉넉한 조준 판정이 필요한 것은 트리거로 만들어 물리(충돌·낙하 동전·
+    /// 손 위치 보정)에서 빼되, 이 컴포넌트의 레이만은 트리거를 **본다.**
+    /// 그래서 여기서만 QueryTriggerInteraction.Collide 를 쓴다 — 물리 쪽 레이는 전부 Ignore 다.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public sealed class PlayerInteractor : MonoBehaviour
@@ -65,8 +70,9 @@ namespace NHNAI.Game.Player
         Interactable Probe()
         {
             // 화면 정중앙에서 카메라 정면으로. 1인칭이라 카메라가 곧 시선이다.
+            // Collide — 조준 전용 트리거(레버·환불 버튼)를 봐야 한다 (클래스 주석의 규약).
             var ray = new Ray(_camera.transform.position, _camera.transform.forward);
-            if (Physics.Raycast(ray, out var hit, reach, mask, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(ray, out var hit, reach, mask, QueryTriggerInteraction.Collide))
             {
                 var found = Valid(hit.collider);
                 if (found != null) return found;
@@ -76,7 +82,7 @@ namespace NHNAI.Game.Player
             // 콜라이더를 키우는 대신(물리는 실루엣대로 타이트해야 한다) 조준만 넉넉하게
             // 한다. 레버처럼 큰 대상은 위의 정밀 레이가 먼저 잡아 감각이 변하지 않는다.
             if (Physics.SphereCast(ray, aimAssistRadius, out hit, reach, mask,
-                                   QueryTriggerInteraction.Ignore))
+                                   QueryTriggerInteraction.Collide))
                 return Valid(hit.collider);
 
             return null;
