@@ -100,13 +100,19 @@ def poly(n, radius, spin=0.0, dr=0.0):
     return ("poly", n, radius, spin, dr)
 
 
-def rect(up, across, dr=0.0):
-    """직사각형 판. up = 릴이 흐르는 방향(창에서 세로), across = 드럼 축 방향(가로)."""
-    return ("rect", up, across, dr)
+def rect(up, across, u=0.0, dr=0.0):
+    """직사각형 판. up = 릴이 흐르는 방향(창에서 세로), across = 드럼 축 방향(가로).
+
+    u 는 면 안에서의 세로 오프셋 — 막대를 위아래로 나눠 놓을 때 쓴다.
+    """
+    return ("rect", up, across, u, dr)
 
 
 # 면 하나의 크기는 세로 0.099 (= 2·R·sin22.5°) · 가로 0.11 (= REEL_W) 이다.
 # 여유를 두고 어느 쪽도 0.076 을 넘기지 않는다.
+#
+# **빈 면을 두지 않는다.** 당첨 판정이 심볼 인덱스로만 이뤄지는데 빈 면이 섞여 있으면
+# 아무것도 안 보이는 자리 셋이 맞아 '큰 성공' 이 터진다 — 화면이 거짓말을 하게 된다.
 SYMBOLS = [
     ("circle",   (poly(12, 0.035),)),
     ("square",   (rect(0.060, 0.060),)),
@@ -115,7 +121,7 @@ SYMBOLS = [
     ("cross",    (rect(0.068, 0.022), rect(0.022, 0.068, dr=0.0006))),
     ("star",     (poly(3, 0.036), poly(3, 0.036, spin=180, dr=0.0006))),   # 세모 둘을 엇갈려 6각별
     ("bar",      (rect(0.024, 0.074),)),
-    ("blank",    ()),
+    ("barbar",   (rect(0.020, 0.074, u=0.019), rect(0.020, 0.074, u=-0.019))),
 ]
 
 
@@ -133,10 +139,15 @@ def set_pivot(obj, pivot):
     return obj
 
 
-def mark_center(theta, dr):
-    """각도 theta 인 면 바깥 SYM_R+dr 지점 (릴 로컬 좌표)."""
+def mark_center(theta, dr, u=0.0):
+    """각도 theta 인 면 바깥 SYM_R+dr 지점에서, 면을 따라 세로로 u 만큼 옮긴 자리.
+
+    면은 평평하므로 접선 방향으로 밀어도 면 위에 그대로 남는다.
+    """
     r = SYM_R + dr
-    return (r * math.cos(theta), r * math.sin(theta), 0.0)
+    return (r * math.cos(theta) - u * math.sin(theta),
+            r * math.sin(theta) + u * math.cos(theta),
+            0.0)
 
 
 def face_rotation(theta, spin):
@@ -154,8 +165,8 @@ def face_rotation(theta, spin):
 def build_mark(name, mark, theta):
     """면 위에 심볼 마크 하나를 세운다."""
     if mark[0] == "rect":
-        _, up, across, dr = mark
-        return builders.box(name, (SYM_T, up, across), loc=mark_center(theta, dr),
+        _, up, across, u, dr = mark
+        return builders.box(name, (SYM_T, up, across), loc=mark_center(theta, dr, u),
                             rot=(0, 0, math.degrees(theta)), color="chalk")
 
     _, n, radius, spin, dr = mark
@@ -236,8 +247,12 @@ for ri, rx in enumerate(REEL_X):
     for fi in range(REEL_N):
         palette.apply_color(parts[0], "bone" if fi % 2 else "concrete", faces=[fi])
 
+    # **세 릴이 같은 배열을 쓴다.** 예전에는 릴마다 3칸씩 어긋나게 두었는데, 그러면
+    # 세 릴이 같은 각도(= 같은 심볼 인덱스)에서 멈춰도 화면에는 서로 다른 무늬가
+    # 보인다. SlotMachine.cs 는 인덱스로 당첨을 판정하므로 배열이 어긋나 있으면
+    # 판정과 화면이 어긋난다. 돌 때 릴이 따로 노는 것은 속도·정지 시각이 만든다.
     for fi in range(REEL_N):
-        sym, marks = SYMBOLS[(fi + ri * 3) % len(SYMBOLS)]   # 릴마다 배열을 어긋나게
+        sym, marks = SYMBOLS[fi]
         theta = 2 * math.pi * (fi + 0.5) / REEL_N + FACE_PHASE   # 면 중심 각도 (드럼과 같이 돌린다)
         for mi, mark in enumerate(marks):
             parts.append(build_mark(f"Sym_{ri}_{fi}_{sym}_{mi}", mark, theta))
@@ -302,3 +317,4 @@ print("--- 오브젝트별 원점 (회전축) ---")
 for o in objs:
     print(f"  {o.name:<14} origin = ({o.location.x:.3f}, {o.location.y:.3f}, {o.location.z:.3f})")
 print(f"  릴 심볼 수 = {REEL_N} (SlotMachine.cs 의 SymbolCount 와 같아야 한다)")
+print(f"  무늬 배열 = {', '.join(name for name, _ in SYMBOLS)}  ← 세 릴 공통")

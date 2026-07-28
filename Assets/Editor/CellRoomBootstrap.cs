@@ -158,7 +158,15 @@ namespace NHNAI.EditorTools
             }
 
             var view = machine.AddComponent<SlotMachineView>();
-            view.Bind(reels, lever);
+
+            // 성공 연출은 광원 둘과 흔들 대상을 쥔다. 흔드는 것은 기계 루트라
+            // 릴·레버·광원이 전부 같이 떤다 — 캐비닛만 떨면 부품이 공중에 남는다.
+            var effect = machine.AddComponent<SlotMachineWinEffect>();
+            effect.Bind(BuildWinLight(machine.transform),
+                        BuildReelBacklight(machine.transform),
+                        machine.transform);
+
+            view.Bind(reels, lever, effect);
 
             // 레이캐스트로 잡으려면 Collider 가 있어야 하고, Interactable 과 **같은
             // 오브젝트**에 있어야 한다. FBX 임포트는 Collider 를 만들어 주지 않는다.
@@ -181,8 +189,32 @@ namespace NHNAI.EditorTools
             capsule.center = new Vector3(0.01f, 0.15f, 0f);
 
             lever.gameObject.AddComponent<SlotMachineLever>().Bind(view);
+        }
 
-            BuildReelBacklight(machine.transform);
+        /// <summary>
+        /// 성공했을 때 방을 물들이는 광원. **평소에는 세기 0 으로 꺼져 있다** —
+        /// 켜 두면 기계가 방을 밝히는 그림이 되어 어둠이 무너진다.
+        ///
+        /// 자리는 기계 앞 · 마퀴 높이다. 여기서 켜지면 마퀴 패널(paper)과 조작대가
+        /// 먼저 밝아지고 그 빛이 벽 · 바닥으로 번져, 성공이 기계에서 시작해 방으로
+        /// 퍼지는 순서로 읽힌다. range 는 방 한 변(8 m)에 못 미치게 두되 벽까지는
+        /// 닿게 한다 — 짧으면 기계 주변만 반짝이고 방은 그대로 어둡다.
+        ///
+        /// 그림자는 끈다. 켜면 광원이 기계 코앞이라 자기 그림자가 캐비닛 앞면을 갉는다.
+        /// </summary>
+        static Light BuildWinLight(Transform machine)
+        {
+            var go = new GameObject("WinLight");
+            go.transform.SetParent(machine, false);
+            go.transform.localPosition = new Vector3(0f, 1.62f, 0.34f);
+
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = Color.white;
+            light.intensity = 0f;
+            light.range = 7f;
+            light.shadows = LightShadows.None;
+            return light;
         }
 
         /// <summary>
@@ -200,7 +232,7 @@ namespace NHNAI.EditorTools
         /// 그림자를 켜면 프레임에 막혀 릴이 캄캄해진다. 그림자가 필요해지면
         /// 광원을 격실 안으로 되돌리고 세기를 크게 낮춰야 한다.
         /// </summary>
-        static void BuildReelBacklight(Transform machine)
+        static Light BuildReelBacklight(Transform machine)
         {
             var go = new GameObject("ReelBacklight_Light");
             go.transform.SetParent(machine, false);
@@ -212,6 +244,9 @@ namespace NHNAI.EditorTools
             light.intensity = 1.6f;
             light.range = 0.75f;          // 창 밖으로 새어 방을 밝히지 않을 만큼만
             light.shadows = LightShadows.None;
+            // 이 세기가 '쉴 때' 값이다. 성공 연출이 Awake 에서 기억해 두고 그 위로 올린 뒤
+            // 되돌린다 — 여기 값을 바꾸면 연출의 최대 밝기도 배수만큼 같이 움직인다.
+            return light;
         }
 
         static Transform FindChild(Transform root, string name)

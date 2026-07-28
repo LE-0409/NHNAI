@@ -10,7 +10,9 @@ namespace NHNAI.Game.Slot
     /// <see cref="SymbolCount"/> 는 생성 스크립트의 REEL_N 과 **반드시** 같아야 한다.
     /// 어긋나면 릴이 심볼 사이 어중간한 각도에서 멈춘다.
     ///
-    /// 당첨 판정은 아직 없다. 지금은 돌고 멈추는 것까지다.
+    /// 판정은 심볼 **인덱스**만 본다. 그것이 '화면에 같은 무늬가 보인다' 와 같은 뜻이려면
+    /// 세 릴의 무늬 배열이 같아야 한다 — generate_slot_machine.py 가 릴마다 배열을
+    /// 어긋나게 두던 것을 없앤 이유다. 배열을 다시 어긋나게 하면 여기 판정이 거짓말이 된다.
     /// </summary>
     public sealed class SlotMachine
     {
@@ -27,6 +29,14 @@ namespace NHNAI.Game.Slot
         const float MinTurnBeforeStop = 540f;  // 감속 전 최소 회전량(도)
 
         public enum Phase { Idle, Spinning, Done }
+
+        /// <summary>
+        /// 성공 등급. 세 릴이 **다** 멈춘 순간에 정해진다.
+        ///
+        /// 8종 · 릴 3개라 확률은 큰 성공 1/64 (1.6%), 작은 성공 21/64 (33%) 다.
+        /// 작은 성공이 잦은 것은 의도다 — 기계가 계속 반응해야 살아 있어 보인다.
+        /// </summary>
+        public enum Win { None, Small, Big }
 
         struct Reel
         {
@@ -47,6 +57,9 @@ namespace NHNAI.Game.Slot
 
         public Phase State { get; private set; } = Phase.Idle;
 
+        /// <summary>직전 회전의 결과. 도는 동안에는 <see cref="Win.None"/> 이다.</summary>
+        public Win Result { get; private set; } = Win.None;
+
         /// <summary>릴 i 의 현재 회전각(도). 뷰가 이 값을 그대로 Transform 에 넣는다.</summary>
         public float AngleOf(int reel) => _reels[reel].Angle;
 
@@ -66,6 +79,7 @@ namespace NHNAI.Game.Slot
             _rng = new Random(seed);
             _elapsed = 0f;
             State = Phase.Spinning;
+            Result = Win.None;
 
             for (var i = 0; i < ReelCount; i++)
             {
@@ -111,7 +125,24 @@ namespace NHNAI.Game.Slot
                 }
             }
 
-            if (allStopped) State = Phase.Done;
+            if (!allStopped) return;
+
+            State = Phase.Done;
+            Result = Judge();
+        }
+
+        /// <summary>
+        /// 셋 다 같으면 큰 성공, 둘만 같으면 작은 성공이다.
+        /// 릴 3개를 전제로 쓴 식이라 <see cref="ReelCount"/> 를 늘리면 여기부터 고친다.
+        /// </summary>
+        Win Judge()
+        {
+            var a = _reels[0].Symbol;
+            var b = _reels[1].Symbol;
+            var c = _reels[2].Symbol;
+
+            if (a == b && b == c) return Win.Big;
+            return a == b || b == c || a == c ? Win.Small : Win.None;
         }
 
         void BeginStop(ref Reel reel)
