@@ -30,8 +30,10 @@ namespace NHNAI.Game.Player
         [SerializeField] float followSharpness = 18f;
 
         [Header("투입")]
-        [Tooltip("들린 동전이 투입구 앵커와 이 거리(m) 안이면 흡입이 시작된다")]
-        [SerializeField] float intakeRadius = 0.14f;
+        [Tooltip("들린 동전이 투입구 앵커와 이 거리(m) 안이면 흡입이 시작된다. " +
+                 "플레이어 충돌체가 조작대에 막혀 정면에서는 동전-앵커 거리가 " +
+                 "0.16 아래로 잘 안 내려간다 — 그보다 여유 있게 잡는다")]
+        [SerializeField] float intakeRadius = 0.2f;
         [Tooltip("흡입에 걸리는 시간(초). ease-in 이라 끝으로 갈수록 빨라진다")]
         [SerializeField] float insertTime = 0.28f;
 

@@ -108,7 +108,8 @@ namespace NHNAI.Game.Slot
                                        Random.Range(0f, 360f),
                                        Random.Range(-12f, 12f));
 
-            var go = Instantiate(coinTemplate, pos, rot);
+            // 템플릿과 같은 부모(Coins) 밑에 — 씬 루트가 동전 백 개로 어질러지지 않게.
+            var go = Instantiate(coinTemplate, pos, rot, coinTemplate.transform.parent);
             go.SetActive(true);
 
             if (go.TryGetComponent<Rigidbody>(out var body))

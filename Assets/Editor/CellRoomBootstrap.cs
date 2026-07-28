@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using NHNAI.Game.Coins;
 using NHNAI.Game.Player;
 using NHNAI.Game.Slot;
 using NHNAI.UI.Hud;
@@ -58,6 +59,26 @@ namespace NHNAI.EditorTools
         /// </summary>
         const float SpotEdgeSoftness = 0.25f;
 
+        /// <summary>씬 조립 단계 사이로 건네는 슬롯머신 배선 묶음. 생성 중에만 산다.</summary>
+        struct MachineRig
+        {
+            public SlotMachineView View;
+            public SlotMachineWinEffect Effect;
+            public CoinDispenser Dispenser;
+            public Light TrayLight;
+            public Transform CoinSlot;      // 흡입 판정 앵커 (원점 = 슬릿 입구)
+            public Transform CoinTray;      // 트레이 조명·부근 판정 앵커 (원점 = 안쪽 바닥 중앙)
+            public Transform PayoutMouth;   // 배출 스폰 앵커 (원점 = 개구 앞)
+        }
+
+        /// <summary>플레이어 쪽 배선 묶음. 동전 시스템이 카메라·충돌체를 필요로 한다.</summary>
+        struct PlayerRig
+        {
+            public PlayerInteractor Interactor;
+            public Transform CameraTransform;
+            public Collider Body;           // CharacterController — 동전과의 충돌 무시용
+        }
+
         [MenuItem("NHNAI/Scenes/독방 (CellRoom)", priority = 20)]
         public static void Create()
         {
@@ -67,9 +88,11 @@ namespace NHNAI.EditorTools
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            BuildEnvironment();
+            var machineRig = BuildEnvironment();
             BuildLighting();
-            BuildCamera();
+            var playerRig = BuildCamera();
+            // 동전은 기계(앵커·배출기)와 플레이어(손·충돌체) 양쪽에 걸치므로 맨 뒤다.
+            BuildCoins(machineRig, playerRig);
             BuildPostProcessing();
             ConfigureRenderSettings();
 
@@ -83,7 +106,7 @@ namespace NHNAI.EditorTools
 
         // --- 환경 ------------------------------------------------------------
 
-        static void BuildEnvironment()
+        static MachineRig BuildEnvironment()
         {
             var root = new GameObject("Environment").transform;
 
@@ -108,16 +131,17 @@ namespace NHNAI.EditorTools
             // 슬롯머신은 방 한가운데, 전등 바로 아래. 앞면이 +Z 를 본다
             // (ArtPipeline 규약: Blender −Y 전방 → Unity +Z 전방).
             var machine = Place("SlotMachine", root, Vector3.zero, Vector3.zero);
-            if (machine != null)
-            {
-                // 캐비닛만 막는다. 릴은 창 안이라 닿을 일이 없고, 유리·백라이트에 콜라이더를
-                // 붙이면 레버를 조준할 때 앞을 가로막는다. 레버는 아래에서 따로 붙인다.
-                // LeverHub 는 레버 뿌리를 감싸는 통이라 콜라이더를 주면 레버를 노린
-                // 레이를 대신 받아 조준이 먹통이 된다 — 보이기만 하면 되는 부품이다.
-                AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
-                                 "Lever", "LeverHub", "ReelGlass", "ReelBacklight");
-                WireSlotMachine(machine);
-            }
+            if (machine == null) return default;
+
+            // 캐비닛만 막는다. 릴은 창 안이라 닿을 일이 없고, 유리·백라이트에 콜라이더를
+            // 붙이면 레버를 조준할 때 앞을 가로막는다. 레버는 아래에서 따로 붙인다.
+            // LeverHub 는 레버 뿌리를 감싸는 통이라 콜라이더를 주면 레버를 노린
+            // 레이를 대신 받아 조준이 먹통이 된다 — 보이기만 하면 되는 부품이다.
+            // CoinSlot·CoinTray·PayoutMouth 는 **일부러 막는다** (skip 에 없다) —
+            // 특히 트레이는 non-convex MeshCollider 라야 오목한 안쪽에 동전이 담긴다.
+            AddMeshColliders(machine, "Reel_0", "Reel_1", "Reel_2",
+                             "Lever", "LeverHub", "ReelGlass", "ReelBacklight");
+            return WireSlotMachine(machine);
         }
 
         /// <summary>
@@ -137,11 +161,11 @@ namespace NHNAI.EditorTools
         }
 
         /// <summary>
-        /// FBX 계층에서 움직이는 부품을 찾아 컴포넌트를 붙인다.
+        /// FBX 계층에서 움직이는 부품과 앵커를 찾아 컴포넌트를 붙인다.
         /// 이름은 생성 스크립트가 정한 것이라 어긋나면 조용히 동작하지 않는다 —
         /// 못 찾으면 에러를 남긴다.
         /// </summary>
-        static void WireSlotMachine(GameObject machine)
+        static MachineRig WireSlotMachine(GameObject machine)
         {
             var reels = new Transform[3];
             for (var i = 0; i < reels.Length; i++)
@@ -154,7 +178,7 @@ namespace NHNAI.EditorTools
             if (lever == null)
             {
                 Debug.LogError("[NHNAI] SlotMachine.fbx 에 Lever 가 없다. 상호작용을 붙이지 못했다.");
-                return;
+                return default;
             }
 
             var view = machine.AddComponent<SlotMachineView>();
@@ -181,6 +205,17 @@ namespace NHNAI.EditorTools
             view.Bind(reels, lever, effect, dispenser);
             // dispenser 의 앵커·템플릿·트레이 조명은 BuildCoins 단계가 꽂는다.
 
+            var rig = new MachineRig
+            {
+                View = view,
+                Effect = effect,
+                Dispenser = dispenser,
+                TrayLight = BuildTrayLight(machine.transform),
+                CoinSlot = FindAnchor(machine, "CoinSlot"),
+                CoinTray = FindAnchor(machine, "CoinTray"),
+                PayoutMouth = FindAnchor(machine, "PayoutMouth"),
+            };
+
             // 레이캐스트로 잡으려면 Collider 가 있어야 하고, Interactable 과 **같은
             // 오브젝트**에 있어야 한다. FBX 임포트는 Collider 를 만들어 주지 않는다.
             //
@@ -202,6 +237,18 @@ namespace NHNAI.EditorTools
             capsule.center = new Vector3(0.01f, 0.15f, 0f);
 
             lever.gameObject.AddComponent<SlotMachineLever>().Bind(view);
+
+            return rig;
+        }
+
+        /// <summary>동전 앵커 오브젝트. 원점이 곧 앵커라 Transform 만 있으면 된다.</summary>
+        static Transform FindAnchor(GameObject machine, string name)
+        {
+            var anchor = FindChild(machine.transform, name);
+            if (anchor == null)
+                Debug.LogError($"[NHNAI] SlotMachine.fbx 에 {name} 이 없다. " +
+                               "ArtPipeline 의 generate_slot_machine.py 를 다시 돌려야 한다.");
+            return anchor;
         }
 
         /// <summary>
@@ -258,6 +305,35 @@ namespace NHNAI.EditorTools
             // '쉴 때' 세기의 정본은 SlotMachinePower.reelRestIntensity 다. 여기 아니다.
             light.intensity = 0f;
             light.range = 0.75f;          // 창 밖으로 새어 방을 밝히지 않을 만큼만
+            light.shadows = LightShadows.None;
+            return light;
+        }
+
+        /// <summary>
+        /// 배출 트레이를 내리비추는 조명. 배출된 동전이 **보여야** 주울 수 있다 —
+        /// 방의 전등은 기계 위에 있어서 트레이는 캐비닛 그늘에 잠긴다.
+        ///
+        /// 평소엔 꺼져 있고 CoinDispenser 가 켠다: 배출 중 + 트레이에 동전이 남아 있는
+        /// 동안. 전원 상태와는 독립이다 — 크레딧이 떨어졌다고 딴 돈까지 캄캄해지면 안 된다.
+        ///
+        /// 스폿을 수직 아래로 쏜다. 트레이 안쪽 바닥(y 0.20)까지 0.42 m 라 60도 원뿔이면
+        /// 바닥에서 반경 약 0.24 m — 트레이(반폭 0.18)를 덮고 조금 넘쳐 앞 바닥에
+        /// 빛 웅덩이가 진다. 그 웅덩이가 "여기 돈이 나온다" 는 표지판 역할을 한다.
+        /// </summary>
+        static Light BuildTrayLight(Transform machine)
+        {
+            var go = new GameObject("TrayLight");
+            go.transform.SetParent(machine, false);
+            go.transform.localPosition = new Vector3(0f, 0.62f, 0.36f);
+            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // 수직 아래
+
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Spot;
+            light.color = Color.white;
+            light.intensity = 0f;         // CoinDispenser 가 켠다
+            light.range = 1.0f;
+            light.spotAngle = 60f;
+            light.innerSpotAngle = 30f;
             light.shadows = LightShadows.None;
             return light;
         }
@@ -334,7 +410,7 @@ namespace NHNAI.EditorTools
 
         // --- 카메라 ----------------------------------------------------------
 
-        static void BuildCamera()
+        static PlayerRig BuildCamera()
         {
             // 1인칭. 플레이어는 자신을 볼 수 없어서 보이는 몸은 없지만, 걷고 부딪히려면
             // 충돌체가 필요하다. **몸통이 좌우(yaw)를 맡고 카메라가 상하(pitch)를 맡는다** —
@@ -390,6 +466,114 @@ namespace NHNAI.EditorTools
             // 화면 중앙 조준 + 클릭. HUD 가 이 컴포넌트를 구독한다.
             var interactor = go.AddComponent<PlayerInteractor>();
             BuildHud(interactor);
+
+            return new PlayerRig
+            {
+                Interactor = interactor,
+                CameraTransform = go.transform,
+                Body = controller,
+            };
+        }
+
+        // --- 동전 -------------------------------------------------------------
+
+        const string CoinPhysicsPath = "Assets/Settings/CoinPhysics.physicMaterial";
+
+        /// <summary>
+        /// 동전 시스템 배선 — 손(캐리어) · 물리 머티리얼 · 씬의 비활성 템플릿 · 시작 동전 3개.
+        /// 기계(앵커·배출기)와 플레이어(카메라·충돌체) 양쪽이 다 만들어진 뒤에 불린다.
+        ///
+        /// 템플릿을 .prefab 으로 굽지 않고 씬에 비활성으로 심는 이유: 씬의 정본이
+        /// 이 파일이듯 동전의 정본도 이 함수다. 에셋을 하나 더 만들면 정본이 갈라진다.
+        /// </summary>
+        static void BuildCoins(MachineRig machine, PlayerRig player)
+        {
+            if (player.CameraTransform == null) return;
+
+            // 잡은 동전을 들고 다니는 손. 카메라에 붙는다 — holdOffset 이 카메라 로컬이다.
+            var carrier = player.CameraTransform.gameObject.AddComponent<PlayerCoinCarrier>();
+            carrier.Bind(player.Interactor, machine.View, machine.CoinSlot);
+
+            var physics = BuildCoinPhysicsMaterial();
+
+            var root = new GameObject("Coins").transform;
+            var template = Place("Coin", root, Vector3.zero, Vector3.zero);
+            if (template == null) return;
+            template.name = "CoinTemplate";
+
+            // Coin.fbx 는 오브젝트 하나라 보통 루트에 메시가 있지만, 임포터가 계층을
+            // 어떻게 짜든 규약(Interactable = Collider 와 같은 오브젝트)이 지켜지도록
+            // 메시가 있는 오브젝트를 찾아 전부 거기에 붙인다.
+            var filter = template.GetComponentInChildren<MeshFilter>(true);
+            if (filter == null)
+            {
+                Debug.LogError("[NHNAI] Coin.fbx 에 메시가 없다. 동전을 만들지 못했다.");
+                return;
+            }
+            var target = filter.gameObject;
+
+            var body = target.AddComponent<Rigidbody>();
+            body.mass = Coin.Mass;
+            // 얇고 작고 빠르다 — 이산 판정이면 트레이 바닥을 뚫는 프레임이 나온다.
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            // 코앞에서 들여다보는 오브젝트라 물리 스텝(50 Hz)과 렌더 프레임 사이
+            // 계단 현상이 보인다. 보간으로 잇는다.
+            body.interpolation = RigidbodyInterpolation.Interpolate;
+
+            var collider = target.AddComponent<MeshCollider>();
+            collider.sharedMesh = filter.sharedMesh;   // 12각 원반 그대로 — 실루엣만큼 타이트
+            collider.convex = true;                    // Rigidbody 가 붙는 콜라이더는 convex 여야 한다
+            collider.sharedMaterial = physics;
+            collider.contactOffset = Coin.ContactOffset;
+
+            target.AddComponent<Coin>().Bind(carrier, player.Body);
+
+            // 템플릿은 보이지 않는다. 배출기와 아래 시작 동전이 복제해 쓴다.
+            template.SetActive(false);
+
+            if (machine.Dispenser != null)
+                machine.Dispenser.Bind(template, machine.PayoutMouth, machine.CoinTray,
+                                       machine.TrayLight, machine.Effect);
+
+            // 시작 동전 3개 — 스폰(0, 0.05, 1.6)에서 기계로 걷는 동선 좌우, 빛 원뿔
+            // (바닥 반경 ~1.77 m) 안. 바닥에 떨어진 동전을 주워 넣는 첫 행동을
+            // 조명이 가르쳐 준다. 첫 스핀이 꽝이어도 두 번 더 기회가 있다.
+            SpawnStartCoin(template, root, new Vector3(0.45f, 0.03f, 0.95f), 20f);
+            SpawnStartCoin(template, root, new Vector3(-0.55f, 0.03f, 1.15f), 130f);
+            SpawnStartCoin(template, root, new Vector3(0.10f, 0.03f, 0.60f), 275f);
+        }
+
+        static void SpawnStartCoin(GameObject template, Transform parent, Vector3 pos, float yaw)
+        {
+            var coin = Object.Instantiate(template, parent);
+            coin.name = "Coin";
+            // 바닥에서 3 cm — 첫 물리 프레임에 살짝 내려앉으며 자연스럽게 자리 잡는다.
+            coin.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
+            coin.SetActive(true);
+        }
+
+        /// <summary>
+        /// 동전 물리 머티리얼. VolumeProfile 처럼 에셋으로 굽되 값의 정본은 Coin.cs 상수다.
+        ///
+        /// bounceCombine 이 Maximum 인 이유: 바닥·기계에는 물리 머티리얼이 없어(반발 0)
+        /// 기본 조합(평균)이면 동전의 튕김이 반토막 난다. 큰 쪽을 쓰면 동전끼리든
+        /// 바닥에든 Coin.Bounciness 가 그대로 산다.
+        /// </summary>
+        static PhysicsMaterial BuildCoinPhysicsMaterial()
+        {
+            var material = new PhysicsMaterial("CoinPhysics")
+            {
+                bounciness = Coin.Bounciness,
+                dynamicFriction = Coin.Friction,
+                staticFriction = Coin.Friction,
+                bounceCombine = PhysicsMaterialCombine.Maximum,
+                frictionCombine = PhysicsMaterialCombine.Average,
+            };
+
+            Directory.CreateDirectory(Path.GetDirectoryName(CoinPhysicsPath)!);
+            AssetDatabase.DeleteAsset(CoinPhysicsPath);
+            AssetDatabase.CreateAsset(material, CoinPhysicsPath);
+            return material;
         }
 
         // --- HUD --------------------------------------------------------------
