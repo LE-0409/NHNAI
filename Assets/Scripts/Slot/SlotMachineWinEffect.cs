@@ -52,6 +52,12 @@ namespace NHNAI.Game.Slot
         [Tooltip("펄스 한 번에서 밝아지는 데 쓰는 비율. 작을수록 '탁' 켜진다")]
         [SerializeField, Range(0.02f, 0.5f)] float attackRatio = 0.14f;
 
+        [Header("징글 홀드 — 노래가 흐르는 동안 반짝임 없이 켜 둔다")]
+        [Tooltip("노래 동안 방 광원의 세기. 펄스 정점(roomIntensity)보다 낮아야 이후의 반짝임이 사건으로 읽힌다")]
+        [SerializeField] float holdRoomIntensity = 2.5f;
+        [Tooltip("노래 동안 릴 창 조명 = 쉼 세기 x 이 배율")]
+        [SerializeField] float holdReelBoost = 1.4f;
+
         [Header("진동 (큰 성공만)")]
         [SerializeField] float shakeAmplitude = 0.006f;
         [SerializeField] float shakeTime = 0.32f;
@@ -61,9 +67,12 @@ namespace NHNAI.Game.Slot
 
         float _flashTimer = -1f;   // 음수 = 쉬는 중. 진동과 타이머를 나눈 이유:
         float _shakeTimer = -1f;   // 펄스는 동전마다, 진동은 스핀 끝에 한 번 — 주기가 다르다.
+        bool _holding;             // 징글 홀드 중 — 빛을 일정하게 켜 둔다
 
-        /// <summary>펄스가 도는 중인가. 이 동안 릴 조명의 작성자는 이 컴포넌트다.</summary>
-        public bool Playing => _flashTimer >= 0f;
+        /// <summary>펄스나 홀드가 진행 중인가. 이 동안 릴 조명의 작성자는 이 컴포넌트고,
+        /// 전원 상태(<see cref="SlotMachinePower"/>)도 이 값으로 기계를 살아 있다고 친다 —
+        /// 크레딧 0 으로 노래를 듣는 동안 패널이 식으면 고장처럼 보인다.</summary>
+        public bool Playing => _flashTimer >= 0f || _holding;
 
         float RestIntensity => power != null ? power.ReelRestIntensity : 0f;
 
@@ -95,6 +104,18 @@ namespace NHNAI.Game.Slot
         /// 진행 중인 펄스는 처음부터 다시 — 배출 간격과 맞물려 연속 펄스가 된다.</summary>
         public void FlashCoin() => _flashTimer = 0f;
 
+        /// <summary>징글이 흐르는 동안 <see cref="SlotMachineView"/> 가 잡아 둔다.
+        /// 반짝임 대신 일정한 빛 — 반짝임은 동전이 나올 때만의 신호로 남긴다.</summary>
+        public void BeginHold() => _holding = true;
+
+        /// <summary>징글이 끝났다. 빛을 내리면 곧바로 배출 펄스가 이어받는다.</summary>
+        public void EndHold()
+        {
+            _holding = false;
+            if (roomLight != null) roomLight.intensity = 0f;
+            if (reelLight != null) reelLight.intensity = RestIntensity;
+        }
+
         void Update()
         {
             TickFlash();
@@ -103,6 +124,15 @@ namespace NHNAI.Game.Slot
 
         void TickFlash()
         {
+            // 홀드 중에는 펄스 대신 일정한 빛. 배출은 징글 뒤로 미뤄지므로 둘이 겹칠 일은
+            // 없지만, 겹쳐도 홀드가 이긴다 — 노래 중에는 반짝이지 않는다는 약속이 우선이다.
+            if (_holding)
+            {
+                if (roomLight != null) roomLight.intensity = holdRoomIntensity;
+                if (reelLight != null) reelLight.intensity = RestIntensity * holdReelBoost;
+                return;
+            }
+
             if (_flashTimer < 0f) return;
 
             _flashTimer += Time.deltaTime;

@@ -34,6 +34,9 @@ namespace NHNAI.EditorTools
         const string ReelTickClipPath = "Assets/Audio/ReelTick.mp3";
         const string CoinPickupClipPath = "Assets/Audio/CoinPickup.mp3";
         const string CoinInsertClipPath = "Assets/Audio/CoinInsert.mp3";
+        const string LeverDownClipPath = "Assets/Audio/LeverDown.mp3";
+        const string LeverUpClipPath = "Assets/Audio/LeverUp.mp3";
+        const string WinClipPath = "Assets/Audio/WinJingle.mp3";
 
         // 아래 값은 ArtPipeline 생성 스크립트에서 나온다. 눈대중으로 맞추면 빛과 기둥이 어긋난다.
         // generate_ceiling_lamp.py 를 돌리면 실행 끝에 넣어야 할 값을 출력한다.
@@ -210,7 +213,19 @@ namespace NHNAI.EditorTools
             if (tickClip == null)
                 Debug.LogError($"[NHNAI] 릴 스핀 틱 사운드가 없다: {ReelTickClipPath}");
 
-            view.Bind(reels, lever, effect, dispenser, tickClip);
+            var leverDownClip = AssetDatabase.LoadAssetAtPath<AudioClip>(LeverDownClipPath);
+            if (leverDownClip == null)
+                Debug.LogError($"[NHNAI] 레버 당김음이 없다: {LeverDownClipPath}");
+
+            var leverUpClip = AssetDatabase.LoadAssetAtPath<AudioClip>(LeverUpClipPath);
+            if (leverUpClip == null)
+                Debug.LogError($"[NHNAI] 레버 복귀음이 없다: {LeverUpClipPath}");
+
+            var winClip = AssetDatabase.LoadAssetAtPath<AudioClip>(WinClipPath);
+            if (winClip == null)
+                Debug.LogError($"[NHNAI] 승리 징글이 없다: {WinClipPath}");
+
+            view.Bind(reels, lever, effect, dispenser, tickClip, leverDownClip, leverUpClip, winClip);
             // dispenser 의 앵커·템플릿·트레이 조명은 BuildCoins 단계가 꽂는다.
 
             var rig = new MachineRig
