@@ -170,7 +170,14 @@ namespace NHNAI.Game.Player
 
             Move = _touchMove;
 
-            LookDelta = _touchLook * touchLookScale;
+            // ⚠️ y 를 뒤집는다. UI 패널 좌표는 y 가 **아래**로 자라고, 이 속성의 기준인
+            // 마우스 델타(ReadDesktop)는 y 가 **위**로 자란다. 그대로 넘기면 위로 쓸었을
+            // 때 아래를 본다 — 조이스틱에서 한 것과 똑같은 보정이다.
+            //
+            // 뒤집은 결과가 곧 FPS 의 기본값이다: 쓴 방향으로 시야가 따라간다
+            // (위로 쓸면 위를 본다). 반전을 켜고 끄는 선택지가 필요해지면 그 손잡이는
+            // 여기 붙는다 — 읽는 쪽(PlayerLook)은 장치도 부호도 몰라야 한다.
+            LookDelta = new Vector2(_touchLook.x, -_touchLook.y) * touchLookScale;
             _touchLook = Vector2.zero;
 
             InteractPressed = _touchInteract;
@@ -189,7 +196,11 @@ namespace NHNAI.Game.Player
         /// <summary>조이스틱의 현재 기울기(−1~1). 뗀 순간 0 을 넣어 준다.</summary>
         public void SetMoveAxis(Vector2 axis) => _touchMove = axis;
 
-        /// <summary>시점 패드를 끈 양(패널 논리 좌표). 프레임 안에서 여러 번 와도 쌓인다.</summary>
+        /// <summary>
+        /// 시점 패드를 끈 양. **UI 패널 좌표 그대로** 넘긴다 (y 가 아래로 자란다) —
+        /// 마우스와 부호를 맞추는 것은 <see cref="ReadTouch"/> 의 일이다.
+        /// 프레임 안에서 여러 번 와도 쌓인다.
+        /// </summary>
         public void AddLookDelta(Vector2 delta) => _touchLook += delta;
 
         /// <summary>'사용' 버튼. 소비될 때까지 남는 래치다.</summary>
