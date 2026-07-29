@@ -18,14 +18,12 @@ description: >
 
 | 파일 | 이유 |
 |---|---|
-| `prototype/README.md` | **USS 호환 규칙의 정본** — 금지·허용 속성, 변환 치환표, base.css 리셋 설명 |
-| `DESIGN.md` | 디자인 토큰 원본. 여기 없는 색·간격은 쓰지 않는다 |
-| `prototype/tokens.css` · `base.css` | 이미 정의된 변수·유틸 클래스. 중복 정의 금지 |
-| 기존 화면 (`prototype/card-spread.html`) | 파일 구성·주석·JS 작성 방식의 본보기 |
+| `prototype/README.md` | **USS 호환 규칙과 치환표의 정본** — 쓰지 않는 속성, 짝 파일 규약 |
+| 기존 화면 하나 (`prototype/rotate-gate.html` + `.css`) | 파일 구성·주석 방식의 본보기. **가장 최근에 쓴 것이라 규칙이 가장 잘 지켜져 있다** |
 
-USS 호환 규칙(금지 속성, 치환표)은 **이 스킬에 다시 적지 않는다.**
-`prototype/README.md`가 유일한 정본이다. 상세 근거가 필요하면
-`docs/reference/unity-ui-toolkit/` (css-to-uss-support.md, html-to-uxml-*.md)를 본다.
+USS 호환 규칙(쓰지 않는 속성, 치환표)은 **이 스킬에 다시 적지 않는다.**
+`prototype/README.md`가 유일한 정본이다. 속성별 지원 여부의 상세 근거가 필요하면
+`docs/reference/unity-ui-toolkit/` (`css-to-uss-support.md`, `html-to-uxml-*.md`)를 본다.
 
 ## 산출물 구조
 
@@ -36,30 +34,38 @@ prototype/{화면}.html   ←→  Assets/UI/Screens/{화면PascalCase}/{화면Pa
 prototype/{화면}.css    ←→  Assets/UI/Screens/{화면PascalCase}/{화면PascalCase}.uss
 ```
 
-HTML `<head>`의 스타일 링크 순서는 고정이다 (USS 적용 순서와 일치시킨다):
+`<head>`에는 그 화면의 CSS 하나만 링크한다. **공용 `tokens.css` · `base.css` 는 없다** —
+이 프로젝트는 전역 토큰 파일을 두지 않는다 (CLAUDE.md 「디자인 값은 화면마다 로컬
+변수로 모은다」).
 
 ```html
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="base.css">
-<!-- 사용하는 컴포넌트 CSS (예: card.css) -->
 <link rel="stylesheet" href="{화면}.css">
 ```
 
-`<body>` 첫 줄에는 Unity 쌍 파일 경로를 주석으로 남긴다 (`card-spread.html` 참조).
+`.css` 맨 위에는 브라우저 전용 리셋 블록을 두고 **"USS 로 옮기지 않는다"** 고 표시한다.
+UI Toolkit 은 기본이 flex 라 그 리셋이 하는 일을 이미 하고 있다.
+`<body>` 첫 줄에는 Unity 쌍 파일 경로를 주석으로 남긴다.
 
 ## 지키는 것
 
 - **landscape 1920×1080 기준.** 세로(portrait) 레이아웃은 만들지 않는다.
-- 클래스는 **BEM** (`block__element--modifier`). 규칙은 CLAUDE.md · `docs/reference/unity-ui-toolkit/uss-naming-conventions.md`.
-- 값은 `var(--토큰)`으로만. 토큰에 없는 값이 필요하면 **먼저 `DESIGN.md`에 추가**하고
-  `tokens.uss` · `tokens.css` 세 파일을 같이 고친다.
-- `base.css` 맨 위의 flex 리셋을 지우거나 덮어쓰지 않는다. 이 리셋이 브라우저를 USS 동작에 맞춘다.
-- JS는 단일 파일 안의 vanilla만, **동작 확인용**이다. 정본은 항상 C# — JS에만 있는 동작을 만들지 않는다.
+- 클래스는 **BEM** (`block__element--modifier`). 규칙은 CLAUDE.md ·
+  `docs/reference/unity-ui-toolkit/uss-naming-conventions.md`.
+- **값은 루트 클래스의 `--{화면}-*` 로컬 변수 한곳에 모은다.** 리터럴을 규칙 안에
+  흩뿌리지 않는다. 각 변수에는 무엇을 조절하는 값인지 주석을 한 줄 붙인다.
+- 2단계에서 USS 로 옮길 때 **같은 변수 이름과 같은 값을 쓴다.** 짝이 어긋나면
+  프로토타입이 거짓말을 시작한다 (`prototype/README.md` 참조).
+- **화면에 나가는 문구는 영어로 쓴다.** 기본 폰트에 한글 글리프가 없어 빌드에서만
+  빈칸이 된다 (CLAUDE.md 「폰트 준비」).
+- JS는 쓰지 않는다. 동작의 정본은 항상 C#이다 — JS에만 있는 동작을 만들지 않는다.
+  움직이는 컨트롤이라면 위치와 크기만 보이고 나머지는 C# 에 맡긴다.
 
 ## 완료 기준
 
 1. 브라우저에서 `.html`을 직접 열어 (서버 불필요) 레이아웃이 의도대로 나온다.
-2. `prototype/README.md`의 금지 속성이 CSS에 남아 있지 않다.
-3. 시안 비교 요청이었다면 각 시안을 별도 파일 또는 전환 가능한 클래스로 제공한다.
+2. `prototype/README.md`의 「쓰지 않은 것」 목록이 CSS에 남아 있지 않다.
+3. 값이 루트 클래스 변수로 모여 있고, 각 변수에 주석이 붙어 있다.
+4. 시안 비교 요청이었다면 각 시안을 별도 파일 또는 전환 가능한 클래스로 제공한다.
+5. `prototype/README.md` 의 「화면 짝」 표에 새 줄을 추가했다.
 
 이후 변환(2단계~)은 CLAUDE.md 「개발 파이프라인」 절차를 따른다.

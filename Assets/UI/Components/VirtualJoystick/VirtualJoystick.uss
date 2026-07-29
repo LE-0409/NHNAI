@@ -3,9 +3,9 @@
  * **자리(position/left/bottom)는 여기서 정하지 않는다.** 쓰는 화면이 정한다
  * (MobileControls.uss). 컴포넌트는 어디에 놓여도 같은 모양이어야 한다.
  *
- * 색은 조상이 물려주는 --touch-* 로컬 변수에서 받는다. 지금 그 변수를 정의하는
- * 곳은 MobileControls.uss 의 .mobile-controls 하나뿐이다. DESIGN.md 가 생기면
- * 전부 tokens.uss 의 토큰으로 올라간다 (prototype/README.md 참조). */
+ * 색은 조상이 물려주는 --touch-* 로컬 변수에서 받는다. 그 변수를 정의하는 곳은
+ * MobileControls.uss 의 .mobile-controls 하나뿐이다 — 여기서 다시 정의하면
+ * 화면이 색을 바꿔도 이 컴포넌트만 안 따라온다. */
 
 .joystick {
     width: 248px;

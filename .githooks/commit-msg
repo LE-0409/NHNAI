@@ -41,7 +41,7 @@ if ! printf '%s' "$SUBJECT" | grep -Eq "^($TYPES)(\([a-z0-9-]+\))?!?: .+"; then
   type (필수)
     feat      새 기능
     fix       버그 수정
-    docs      문서만 (CLAUDE.md, DESIGN.md, README)
+    docs      문서만 (CLAUDE.md, README, docs/)
     style     서식만 — 동작·외형 변화 없음
     refactor  기능 변화 없는 구조 개선
     perf      성능 개선
@@ -52,13 +52,13 @@ if ! printf '%s' "$SUBJECT" | grep -Eq "^($TYPES)(\([a-z0-9-]+\))?!?: .+"; then
     revert    되돌리기
 
   scope (선택, 소문자·숫자·하이픈)
-    theme  ui  screen  game  editor  art  prototype  unity  webgl
+    ui  screen  game  editor  art  prototype  unity  webgl
 
   예시
     feat(screen): 메인 메뉴 진입 애니메이션 추가
-    fix(ui): 호버 시 z-order 복구 실패 수정
-    docs(theme): 토큰 출처 표기 보강
-    feat(theme)!: 토큰 이름을 signal 계열로 변경
+    fix(game): 모바일 시점의 상하 반전 수정
+    docs(art): 팔레트 계약 설명 보강
+    feat(game)!: 배당 규칙 전면 변경
 
   파괴적 변경은 type 뒤에 ! 를 붙인다.
 

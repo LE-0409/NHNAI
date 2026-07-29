@@ -6,15 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-NHNAI는 Unity로 만드는 3D 게임이다. UI는 **UI Toolkit이 기본**이다.
-uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다 (아래 「UI — 무엇으로 만드나」 참조).
+NHNAI는 Unity로 만든 1인칭 3D 게임이다. 독방 하나에 슬롯머신 하나가 있다.
+**게임 내용과 만든 방법은 `README.md`가 정본이다** — 여기는 작업 규칙만 다룬다.
+
+UI는 **UI Toolkit이 기본**이다. uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다
+(아래 「UI — 무엇으로 만드나」 참조. 지금까지 uGUI를 쓴 곳은 없다).
 
 이 저장소의 코드는 **LLM이 작성한다는 전제**로 구조가 잡혀 있다.
 그래서 다음을 지킨다.
 
-- 값은 한 곳에만 둔다 (토큰은 `DESIGN.md`, 배치 수식은 C#).
+- 값은 한 곳에만 둔다 (씬 구성은 부트스트랩, 색은 팔레트 레지스트리, 배치 수식은 C#).
 - 파일 하나만 읽어도 그 파일이 뭘 하는지 알 수 있게 쓴다.
-- 결과를 눈으로 확인할 수 있는 경로(HTML 프로토타입)를 항상 확보한다.
+- 결과를 눈으로 확인할 수 있는 경로(HTML 프로토타입 · Blender 프리뷰 렌더)를 항상 확보한다.
+
+**정해지지 않은 것을 추측해서 코드로 만들지 않는다.** 먼저 물어본다 —
+게임 규칙(확률·배당·연출 타이밍)이 특히 그렇다. 그럴듯한 값이 한 번 코드에 박히면
+왜 그 값인지 아무도 모르게 된다.
 
 ### 확정된 것
 
@@ -34,17 +41,22 @@ uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다 (아래 「
 landscape 둘만 `1`이고 `defaultScreenOrientation`이 `3`(LandscapeLeft)이라
 자동 회전조차 아니다. 세로를 지원하게 되면 이 표와 설정을 **같이** 고친다.
 
-### 아직 안 정한 것
+### 디자인 값은 화면마다 로컬 변수로 모은다
 
-- **디자인 시스템.** `DESIGN.md`가 아직 없다. 색·간격·타이포 토큰의 정본이 없는 상태다.
+전역 디자인 토큰 파일(`tokens.uss` 같은 것)은 **두지 않았다.** 화면이 네 개뿐이라
+각 화면을 파일 하나로 자기완결하게 읽는 쪽을 택했다.
 
-토큰이 없는 동안 화면 USS 는 리터럴을 여기저기 흩뿌리는 대신, **루트 클래스의
-`--{화면}-*` 로컬 변수 + `토큰 승격 후보` 주석**으로 한곳에 모은다.
-`Hud.uss` · `MainMenu.uss` · `MobileControls.uss` 가 전부 이 방식이다.
-`DESIGN.md`가 생기면 그 주석이 붙은 값들을 따라 옮기면 된다.
+화면 USS 는 리터럴을 규칙 안에 흩뿌리지 않고 **루트 클래스의 `--{화면}-*` 로컬 변수**
+한곳에 모으고, 변수마다 무엇을 조절하는지 주석을 붙인다.
+`Hud.uss` · `MainMenu.uss` · `MobileControls.uss` · `RotateGate.uss` 가 전부 이 방식이다.
 
-**정해지지 않은 것을 추측해서 코드로 만들지 않는다.** 먼저 물어본다 —
-게임 규칙(확률·배당·연출 타이밍)과 토큰 값이 특히 그렇다.
+⚠️ **이 선택의 비용을 알고 있어야 한다.** 흰색 `rgb(226, 226, 226)` 은 네 화면
+**전부**에, 보조 회색 `rgb(198, 198, 202)` 은 두 화면에 값째로 반복된다. 지금은
+`/* HUD 조준점과 같은 흰색 */` 같은 주석이 서로를 가리켜 연결을 대신하고 있다.
+
+**그래서 이 두 색을 바꿀 때는 네 화면(+ 짝이 되는 `prototype/*.css`)을 다 고쳐야 한다.**
+화면이 더 늘어 반복이 관리되지 않으면 그때 공용 토큰 파일을 뺀다 — 그 전에 미리
+만들지 않는다.
 
 ---
 
@@ -78,11 +90,10 @@ landscape 둘만 `1`이고 `defaultScreenOrientation`이 `3`(LandscapeLeft)이�
 
 ## 디렉터리 구조
 
-### 지금 있는 것
-
 ```
 NHNAI/
-├── CLAUDE.md                  ← 이 파일
+├── README.md                  ← 저장소 얼굴. 게임 소개 · 만든 방법 · AI 활용 방식
+├── CLAUDE.md                  ← 이 파일. AI 작업 규칙의 정본
 │
 ├── .githooks/commit-msg       ← 커밋 메시지 검사. .gitmessage 와 쌍
 ├── .gitmessage                ← 커밋 템플릿
@@ -96,7 +107,7 @@ NHNAI/
 │       └── unity-ui-toolkit/  ← UI Toolkit 참조 문서 (README.md 가 목록)
 │
 ├── prototype/                 ← HTML/CSS 프로토타입 (Unity 밖, 빌드에 포함 안 됨)
-│   ├── README.md              ← ⚠️ 0단계 전 임시 상태. 치환표는 docs/reference 가 정본
+│   ├── README.md              ← USS 호환 규칙 · 치환표 · 짝 파일 규약
 │   ├── main-menu.html + .css
 │   ├── mobile-controls.html + .css
 │   └── rotate-gate.html + .css
@@ -170,29 +181,6 @@ NHNAI/
 `Assets/Settings/`의 `PC_RPAsset` · `Mobile_RPAsset`은 품질 레벨과 짝지어져 있다.
 렌더 설정을 바꿀 때 **둘 다** 봐야 한다 — 한쪽만 고치면 플랫폼에 따라 화면이 달라진다.
 
-### 앞으로 만들 구조
-
-아래는 **계획**이다. 아직 없다. 만들 때 이 배치와 이름을 따른다.
-
-```
-NHNAI/
-├── DESIGN.md                  ← 디자인 토큰 원본 (single source of truth)
-│
-├── docs/game-concepts.md      ← 게임 규칙의 정본
-│
-├── prototype/
-│   ├── README.md              ← 변환 규칙 · CSS→USS 치환표를 여기로 옮겨 온다
-│   └── tokens.css · base.css  ← tokens.uss · base.uss 와 쌍
-│
-└── Assets/UI/Theme/
-    └── tokens.uss · base.uss  ← GameTheme.tss 가 @import 한다
-```
-
-**토큰이 없어서 지금 화면 USS 가 하고 있는 것**: 각 화면 루트 클래스에
-`--{화면}-*` 로컬 변수를 두고 `토큰 승격 후보` 주석을 단다 (`Hud.uss` 가 먼저 쓴 방식).
-리터럴을 여기저기 흩뿌리면 나중에 토큰으로 올릴 때 어디를 고쳐야 할지 알 수 없다.
-`DESIGN.md` 가 생기면 그 주석이 붙은 값들이 토큰으로 올라간다.
-
 ### 어셈블리 의존 방향
 
 ```
@@ -207,31 +195,7 @@ NHNAI.Game  ←  NHNAI.UI  ←  Assembly-CSharp-Editor (Assets/Editor)
 
 ## 개발 파이프라인
 
-### 0단계 — 기반 만들기 (아직 안 됨. 첫 화면보다 먼저 한다)
-
-```
-1. DESIGN.md 를 정한다                    ← 팔레트·간격·타이포 스케일의 정본
-        ▼
-2. prototype/README.md 를 쓴다            ← USS 호환 규칙 · CSS→USS 치환표의 정본
-        ▼
-3. tokens.uss + tokens.css 를 DESIGN.md 에서 뽑는다
-   base.uss  + base.css   를 만든다       ← flex 리셋, 타이포 스케일, .u-* / .t-* 유틸
-        ▼
-4. Assets/UI/Theme/GameTheme.tss 를 만들고 위 둘을 @import 한다
-        ▼
-5. Assets/Editor/UiBootstrap.cs 로 PanelSettings 와 첫 씬을 만든다
-```
-
-`.claude/skills/unity-ui-prototype/` 스킬은 `prototype/README.md` · `DESIGN.md` ·
-`prototype/tokens.css` · `base.css`를 읽어서 동작한다. **0단계가 끝나기 전에는 이 스킬이
-제대로 돌지 않는다.** 그 전에 프로토타입이 필요하면 스킬 없이 직접 쓰고,
-0단계를 마친 뒤 규칙에 맞게 정리한다.
-
-`prototype/` 은 이미 있지만 **1·2단계가 빠진 임시 상태**다 — `tokens.css` 가 없고,
-`README.md` 의 치환표는 `docs/reference/unity-ui-toolkit/css-to-uss-support.md` 를
-가리키기만 한다. 자세한 것은 `prototype/README.md` 의 「지금은 임시 상태다」 절.
-
-### 새 화면을 만들 때 (0단계 이후)
+### 새 화면을 만들 때
 
 ```
 1. prototype/{화면}.html + .css 작성      ← 브라우저에서 레이아웃 확정
@@ -239,6 +203,7 @@ NHNAI.Game  ←  NHNAI.UI  ←  Assembly-CSharp-Editor (Assets/Editor)
         ▼
 2. Assets/UI/Screens/{화면}/{화면}.uxml + .uss 로 변환
         │  치환표는 prototype/README.md
+        │  ⚠️ --{화면}-* 변수는 **이름과 값을 프로토타입과 똑같이** 옮긴다
         ▼
 3. 재사용할 부분을 Assets/UI/Components/{이름}/ 커스텀 컨트롤로 뽑는다
         │  구조는 C# 생성자, 스타일은 .uss
@@ -259,13 +224,17 @@ NHNAI.Game  ←  NHNAI.UI  ←  Assembly-CSharp-Editor (Assets/Editor)
 - 라벨 문구·아이콘 교체 → UXML 직접 수정
 - 새 화면, 3겹 이상 레이어, 시안 비교 → **반드시 프로토타입을 거친다**
 
-### 토큰을 바꿀 때
+### 화면 값을 바꿀 때
 
-세 파일을 **항상 같이** 고친다. 하나라도 빠지면 프로토타입과 게임 화면이 달라진다.
+짝 파일 **둘을 항상 같이** 고친다. 하나만 고치면 브라우저에서 본 것과 게임 화면이
+달라지고, 프로토타입이 거짓말을 시작한다.
 
 ```
-DESIGN.md  →  Assets/UI/Theme/tokens.uss  →  prototype/tokens.css
+prototype/{화면}.css  ←→  Assets/UI/Screens/{화면}/{화면}.uss
 ```
+
+둘은 같은 `--{화면}-*` 변수 이름과 같은 값을 쓴다. 프로토타입이 없는 화면(`Hud`)은
+USS 만 고친다.
 
 ### 왜 `.asset` / `.unity` 를 코드로 만드나
 
@@ -296,17 +265,25 @@ block-name__element-name--modifier-name
 
 유틸 클래스만 예외로 접두사를 쓴다: `.t-*` (타이포) `.u-*` (레이아웃).
 
-### 값은 토큰에서만 가져온다
+### 값은 루트 클래스 변수에 모은다
 
 ```uss
-/* O */
-.panel { padding: var(--space-xl); background-color: var(--color-surface); }
+/* O — 화면 루트에 모아 두고 규칙은 var() 로 참조한다 */
+.main-menu {
+    /* 메뉴가 방을 덮는 정도 */
+    --menu-scrim: rgba(4, 4, 6, 0.62);
+    background-color: var(--menu-scrim);
+}
 
-/* X — 토큰에 없는 값을 직접 씀 */
-.panel { padding: 22px; background-color: #2a2750; }
+/* X — 리터럴을 규칙 안에 흩뿌림. 색을 바꿀 때 어디를 고쳐야 할지 알 수 없다 */
+.main-menu { background-color: rgba(4, 4, 6, 0.62); }
 ```
 
-토큰에 없는 값이 필요하면 **먼저 `DESIGN.md`에 토큰을 추가**하고 쓴다.
+변수마다 **무엇을 조절하는 값인지 주석을 한 줄** 붙인다. 그 주석이 없으면 다음에
+읽는 사람이 값을 만지기를 두려워한다.
+
+프로토타입이 있는 화면은 `prototype/{화면}.css` 가 **같은 이름·같은 값**을 쓴다.
+한쪽만 고치지 않는다.
 
 ### `var()`를 쓰지 않는 예외
 
@@ -323,7 +300,6 @@ transition-duration: var(--motion-base);
 
 이유: `var()` 해석이 색·길이에서는 확실하지만 transition 계열에서는 Unity 버전에 따라
 불안정한 사례가 있다. 애니메이션이 조용히 죽는 것보다 값을 두 번 적는 쪽이 낫다.
-`tokens.uss`의 `--motion-*`는 **문서용 참조값**이다.
 
 ### 애니메이션 — 레이아웃을 건드리지 않는다
 
@@ -484,9 +460,12 @@ LLM이 파일 하나만 읽고 수정할 수 있다. UXML로 쪼개면 구조와
 
 ## 폰트 준비
 
-폰트는 `DESIGN.md`가 정해진 뒤에 고른다. 폰트 에셋이 없으면 Unity 기본 런타임 폰트로
-렌더링된다. 웨이트를 여러 개 쓰려면 웨이트마다 FontAsset을 따로 만들고
-`-unity-font-definition`으로 지정한다 (`uss-exclusive-properties.md` 참조).
+**전용 폰트 에셋을 두지 않았다.** `GamePanelSettings.asset` 에 FontAsset 을 지정하지
+않아서 UI Toolkit 이 Unity 기본 런타임 폰트로 그린다. 화면 문구가 짧고 전부 영어
+대문자라 기본 폰트로 충분했다.
+
+폰트를 도입하게 되면 웨이트마다 FontAsset 을 따로 만들고 `-unity-font-definition` 으로
+지정한다 (`uss-exclusive-properties.md` 참조). USS 에 숫자 `font-weight` 는 없다.
 
 ### ⚠️ 화면에 보이는 글자는 **영어로 쓴다**
 
@@ -551,10 +530,16 @@ cd ArtPipeline
 - 생성 스크립트 하나가 FBX 여러 개를 다시 export하고, FBX는 헤더 타임스탬프와 오브젝트 UID가
   매번 새로 생성돼 **손대지 않은 파일까지 `M`으로 뜬다.** 커밋 전에 실제로 바꾼 것만 남기고
   나머지는 `git checkout --`으로 되돌린다.
-- 아직 Unity 임포트 후처리(팔레트 텍스처 → 머티리얼 리맵)는 붙이지 않았다. 필요해지면
-  `ArtPipeline/KIT.md`의 "엔진 연동" 절을 참고해 이 저장소용으로 만든다.
+- Unity 쪽 연동(팔레트 텍스처 설정 → `.mat` 생성 → FBX 머티리얼 리맵)은
+  `Assets/Editor/ArtMaterialLibrary.cs` 가 한다. **자동 임포트 후처리가 아니라 메뉴다** —
+  `NHNAI > Setup > 1` 을 눌러야 돈다. 새 FBX 를 넣으면 회색 단색으로 보이는데,
+  그건 리맵을 아직 안 돌린 것이다.
 
 ### 문서
+
+`ArtPipeline/` 은 다른 저장소에서 가져온 **벤더링 kit** 이다. 아래 셋은 kit 자체의
+문서라서 이 프로젝트가 쓰지 않는 기능(리깅·애니메이션·kit 설치)도 설명한다 —
+이 저장소가 실제로 쓰는 것은 메시 빌더 · 팔레트 · 익스포트 · 프리뷰 네 모듈이다.
 
 | 주제 | 파일 |
 |---|---|
@@ -786,11 +771,13 @@ WebGL 에서 재현되지 않는 전제 셋 — 코드 문제가 아니라 브�
 - **편의를 이유로 uGUI를 쓰지 않는다.** 「UI — 무엇으로 만드나」의 표에 해당할 때만 쓰고,
   쓸 때는 파일 맨 위에 사유를 남긴다. 스크린 스페이스 UI는 전부 UI Toolkit이다.
 - **세로(portrait) 레이아웃을 만들지 않는다.** landscape 고정이다.
-- **`DESIGN.md`에 없는 색·간격을 하드코딩하지 않는다.** 먼저 토큰을 추가한다.
+- **색·간격 리터럴을 USS 규칙 안에 흩뿌리지 않는다.** 화면 루트 클래스의
+  `--{화면}-*` 변수에 모으고 주석을 붙인다.
 - **`NHNAI.Game`에서 `UnityEngine.UIElements`를 참조하지 않는다.**
 - **`width` / `height` / `left` / `top`을 애니메이션하지 않는다.** `translate` / `scale` / `rotate`를 쓴다.
 - **`PanelSettings.asset`과 `.unity` 씬을 텍스트로 직접 쓰지 않는다.** `UiBootstrap.cs`를 쓴다.
-- **디자인 시스템과 게임 장르가 정해지기 전에 화면 USS·게임 규칙 코드를 추측해 만들지 않는다.**
+- **확률·배당·연출 타이밍 같은 게임 규칙 값을 추측해서 만들지 않는다.** 먼저 물어본다.
+  그럴듯한 값이 한 번 코드에 박히면 왜 그 값인지 아무도 모르게 된다.
 - **게임 스크립트에서 `Keyboard.current` / `Mouse.current` / `Touchscreen`을 직접 읽지 않는다.**
   전부 `PlayerInputSource`를 거친다. 직접 읽으면 PC 에서만 되는 조작이 생긴다.
 - **`Assets/Scripts/`에 만능 `Utils.cs`를 만들지 않는다.** 기능별 폴더에 자기완결 파일로 둔다.
@@ -821,15 +808,14 @@ Conventional Commits 표준 type(`feat` `fix` `docs` `style` `refactor` `perf` `
 `ci` `chore` `revert`)을 그대로 쓴다. 허용 목록은 `.githooks/commit-msg`가 검사하고,
 `.gitmessage` 템플릿에 요약이 있다.
 
-**디자인 토큰 변경은 `style`이 아니다.** Conventional Commits의 `style`은 코드 서식을 뜻한다.
-토큰은 화면을 바꾸므로 `feat(theme)` / `fix(theme)` / `refactor(theme)`를 쓴다.
+**화면 색·간격 변경은 `style`이 아니다.** Conventional Commits의 `style`은 코드 서식을
+뜻한다. 화면이 달라지므로 `feat(screen)` / `fix(screen)` 을 쓴다.
 
 ### scope (선택, 소문자·숫자·하이픈)
 
 | scope | 범위 |
 |---|---|
-| `theme` | 디자인 토큰 — `DESIGN.md`, `tokens.uss`, `tokens.css` |
-| `ui` | UI Toolkit 공통 — `base.uss`, `GameTheme.tss` |
+| `ui` | UI Toolkit 공통 — `GameTheme.tss`, `Assets/UI/Components/` |
 | `screen` | 화면 — `Assets/UI/Screens/` |
 | `game` | 게임 로직 — `NHNAI.Game` |
 | `editor` | 에디터 툴 — `Assets/Editor/` |
@@ -844,8 +830,8 @@ Conventional Commits 표준 type(`feat` `fix` `docs` `style` `refactor` `perf` `
 ### 규칙
 
 - 제목은 **한국어**, 마침표 없이, 72자 이내 (초과 시 경고만 뜬다).
-- 파괴적 변경은 type 뒤에 `!` — `feat(theme)!: 토큰 이름을 signal 계열로 변경`
-- **토큰을 바꾼 커밋은 `DESIGN.md` / `tokens.uss` / `tokens.css` 세 파일을 함께 담는다.** 하나만 담기면 세 곳이 어긋난다.
+- 파괴적 변경은 type 뒤에 `!` — `feat(game)!: 배당 규칙 전면 변경`
+- **화면 값을 바꾼 커밋은 `prototype/{화면}.css` 와 `{화면}.uss` 를 함께 담는다.** 하나만 담기면 둘이 어긋난다.
 - `Co-Authored-By:` 같은 트레일러는 본문 맨 끝에 붙인다. 제목 형식과 충돌하지 않는다.
 - `Merge` / `Revert` / `fixup!` / `squash!` 로 시작하는 자동 생성 메시지는 검사에서 제외된다.
 
@@ -882,16 +868,13 @@ docs/reference/unity-ui-toolkit/    ← 자주 쓰는 페이지 벤더링. READM
 | Transitions & Transform | `uss-transitions.md` |
 | 커스텀 컨트롤 | `custom-controls.md` |
 | 성능 최적화 | `performance-optimization.md` |
-| 데이터 바인딩 | `data-binding-overview.md` |
 | Flexbox 레이아웃 | `uss-layout-engine.md` |
 | HTML→UXML 변환 | `html-to-uxml-guide.md` · `html-to-uxml-elements.md` · `html-to-uxml-layout.md` |
 
+여기 있는 것은 **일반 지식**이다. 프로젝트 특화 결정과 충돌하면 이 파일과
+`prototype/README.md`가 우선한다.
+
 저장소 문서에 없으면 웹 검색으로 보충하고, 알아낸 내용은
 `docs/reference/unity-ui-toolkit/`에 새 페이지로 추가하거나 이 파일에 남긴다.
-**저장소 밖 경로를 참조 문서로 인용하지 않는다** — 다른 개발자의 클론에서 깨진다.
-
-원본 자료(**작성자 로컬 전용** — Coding-Inventory 위키의 UI Toolkit 46페이지·
-LLM 설계 패턴 12페이지, awesome-design-md의 DESIGN.md 원본 73종)는 저장소에 없는 주제를
-찾을 때만 쓰고, 인용한 내용은 반드시 `docs/reference/`로 복사해 저장소를 자기완결로 유지한다.
-**이 저장소는 public 이다.** 로컬 절대 경로를 문서에 적지 않는다 — 다른 개발자의
-클론에서 깨지는 것이 첫 이유고, 공개 저장소에서는 작성자의 디렉터리 구조가 드러난다.
+**저장소 밖 경로를 참조 문서로 인용하지 않는다** — 다른 개발자의 클론에서 깨지고,
+공개 저장소에서는 작성자의 디렉터리 구조가 드러난다.
