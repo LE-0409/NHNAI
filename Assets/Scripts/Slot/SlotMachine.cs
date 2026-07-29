@@ -45,8 +45,23 @@ namespace NHNAI.Game.Slot
         ///
         /// 8종 · 릴 3개라 확률은 큰 성공 1/64 (1.6%), 작은 성공 21/64 (33%) 다.
         /// 작은 성공이 잦은 것은 의도다 — 기계가 계속 반응해야 살아 있어 보인다.
+        /// 단, 도입부 <see cref="ScriptedOpening"/> 회차는 이 확률을 따르지 않는다.
         /// </summary>
         public enum Win { None, Small, Big }
+
+        /// <summary>
+        /// 도입부 각본 — 앞의 몇 회는 결과를 미리 정해 둔다. 확률을 무시한다.
+        ///
+        /// 플레이어는 동전 3개로 시작하므로(<c>CellRoomBootstrap.BuildCoins</c>) 이 세 줄이
+        /// 곧 '첫 판' 전부다: 두 번 빈손으로 애태우고 마지막 하나에서 두 개를 맞춘다.
+        /// 마지막에 딴 <see cref="SmallPayout"/> 개가 그다음부터의 밑천이 된다.
+        ///
+        /// 배열 길이를 넘어선 회차부터는 각본이 없고 순수 난수다.
+        /// **각본을 늘리거나 줄이려면 이 배열만 고친다** — 판정도 배당도 건드릴 필요가 없다.
+        /// 각본이 요구한 등급은 <see cref="PlanSymbols"/> 가 심볼을 거꾸로 짜서 만들어 내므로
+        /// <see cref="Judge"/> 는 각본을 모른 채 평소대로 무늬만 본다.
+        /// </summary>
+        static readonly Win[] ScriptedOpening = { Win.None, Win.None, Win.Small };
 
         struct Reel
         {
@@ -62,8 +77,17 @@ namespace NHNAI.Game.Slot
         }
 
         readonly Reel[] _reels = new Reel[ReelCount];
+
+        // 이번 회전에서 각 릴이 멈출 무늬. 릴이 하나씩 멈출 때 뽑는 게 아니라 당기는
+        // 순간 세 개를 한꺼번에 정한다 — 각본(ScriptedOpening)이 요구하는 '둘만 같다'
+        // 같은 조건은 세 릴을 같이 봐야 만들 수 있기 때문이다.
+        readonly int[] _planned = new int[ReelCount];
+
         Random _rng = new(0);
         float _elapsed;
+
+        // 지금까지 돌린 횟수. 각본의 몇 번째 줄인지가 이 값으로 정해진다.
+        int _spinsDone;
 
         public Phase State { get; private set; } = Phase.Idle;
 
@@ -106,6 +130,7 @@ namespace NHNAI.Game.Slot
         /// 크레딧이 0 이어도 기계가 살아 있는 상태다 (전원 판정이 이 순서에 기댄다).
         /// 같은 seed 면 같은 결과가 나온다 — 재현 가능해야
         /// 버그를 다시 만들어 볼 수 있고, 나중에 런 시드를 붙이기도 쉽다.
+        /// (각본 구간은 seed 와 무관하게 등급이 고정된다. 무늬만 seed 를 따른다.)
         /// </summary>
         public void Pull(int seed)
         {
@@ -116,6 +141,9 @@ namespace NHNAI.Game.Slot
             _elapsed = 0f;
             State = Phase.Spinning;
             Result = Win.None;
+
+            PlanSymbols(_spinsDone < ScriptedOpening.Length ? (Win?)ScriptedOpening[_spinsDone] : null);
+            _spinsDone++;
 
             for (var i = 0; i < ReelCount; i++)
             {
@@ -143,7 +171,7 @@ namespace NHNAI.Game.Slot
                 if (!reel.Stopping)
                 {
                     reel.Angle += reel.Speed * deltaTime;
-                    if (_elapsed >= reel.StopAt) BeginStop(ref reel);
+                    if (_elapsed >= reel.StopAt) BeginStop(ref reel, i);
                     continue;
                 }
 
@@ -181,9 +209,62 @@ namespace NHNAI.Game.Slot
             return a == b || b == c || a == c ? Win.Small : Win.None;
         }
 
-        void BeginStop(ref Reel reel)
+        /// <summary>
+        /// 이번 회전에서 세 릴이 멈출 무늬를 정한다. <paramref name="forced"/> 가 <c>null</c> 이면
+        /// 릴마다 독립 난수 — 예전과 같은 확률이다. 값이 있으면 그 등급이 나오도록 거꾸로 짠다.
+        ///
+        /// 등급을 만들어 내는 곳이 여기 하나뿐이라, <see cref="Judge"/> 는 각본을 몰라도 되고
+        /// 각본이 요구한 등급과 실제 판정이 어긋날 길도 없다.
+        /// </summary>
+        void PlanSymbols(Win? forced)
         {
-            reel.Symbol = _rng.Next(SymbolCount);
+            if (forced == null)
+            {
+                for (var i = 0; i < ReelCount; i++) _planned[i] = _rng.Next(SymbolCount);
+                return;
+            }
+
+            var pick = _rng.Next(SymbolCount);
+            for (var i = 0; i < ReelCount; i++) _planned[i] = pick;
+
+            switch (forced.Value)
+            {
+                case Win.Big:
+                    break;   // 셋 다 같음 — 위에서 이미 채웠다
+
+                case Win.Small:
+                    // 하나만 어긋나면 나머지 둘이 짝이 된다. 어느 릴이 어긋날지는 난수다 —
+                    // 각본이라도 늘 같은 자리가 빗나가면 짜인 티가 난다.
+                    _planned[_rng.Next(ReelCount)] = OtherThan(pick);
+                    break;
+
+                default:
+                    // 셋이 다 달라야 한다. 둘이라도 겹치면 Judge 가 작은 성공으로 읽는다.
+                    _planned[1] = OtherThan(_planned[0]);
+                    _planned[2] = OtherThan(_planned[0], _planned[1]);
+                    break;
+            }
+        }
+
+        /// <summary><paramref name="a"/> 를 뺀 나머지 무늬 중 하나. 남은 것들에 고르게 걸린다.</summary>
+        int OtherThan(int a) => (a + 1 + _rng.Next(SymbolCount - 1)) % SymbolCount;
+
+        /// <summary><paramref name="a"/> 와 <paramref name="b"/> 를 뺀 나머지 중 하나. 둘은 서로 달라야 한다.</summary>
+        int OtherThan(int a, int b)
+        {
+            // 남은 (SymbolCount - 2) 개에 번호를 매겨 뽑고, 건너뛴 만큼 밀어 준다.
+            // 재추첨 반복이 없어 최악의 경우에도 한 번에 끝난다.
+            var lo = Math.Min(a, b);
+            var hi = Math.Max(a, b);
+            var pick = _rng.Next(SymbolCount - 2);
+            if (pick >= lo) pick++;
+            if (pick >= hi) pick++;
+            return pick;
+        }
+
+        void BeginStop(ref Reel reel, int index)
+        {
+            reel.Symbol = _planned[index];
             reel.Stopping = true;
             reel.StopStart = _elapsed;
             reel.From = reel.Angle;
