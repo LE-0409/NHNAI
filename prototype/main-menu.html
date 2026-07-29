@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>NHNAI — 메인메뉴 프로토타입</title>
+    <link rel="stylesheet" href="main-menu.css">
+</head>
+<body>
+    <!-- 실제로는 독방 씬(3D) 위에 덮인다. 여기서는 방 대신 어두운 판을 깔아
+         스크림이 얼마나 덮는지만 본다. -->
+    <div class="stage">
+
+        <!-- 이 트리가 곧 MainMenu.uxml 이다. div → VisualElement, 텍스트 → Label.
+             제목과 두 버튼을 세로로 쌓고, 버튼에는 글자만 둔다. -->
+        <div class="main-menu">
+            <div class="main-menu__title">SLOT MACHINE</div>
+            <button class="menu-button">PC</button>
+            <button class="menu-button">MOBILE</button>
+        </div>
+    </div>
+</body>
+</html>

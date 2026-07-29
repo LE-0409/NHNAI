@@ -1,14 +1,16 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace NHNAI.Game.Player
 {
     /// <summary>
-    /// WASD 걷기. <see cref="CharacterController"/> 위에서 돈다.
+    /// 걷기. <see cref="CharacterController"/> 위에서 돈다.
     ///
-    /// 이동 방향은 **몸통의 정면** 기준이다. <see cref="PlayerLook"/> 이 마우스 좌우로
-    /// 이 오브젝트를 돌려 주므로 여기서는 마우스를 읽지 않는다 — 같은 델타를 두 번
-    /// 소비하면 감도가 두 배가 된다.
+    /// 이동 방향은 **몸통의 정면** 기준이다. <see cref="PlayerLook"/> 이 좌우 입력으로
+    /// 이 오브젝트를 돌려 주므로 여기서는 시선을 읽지 않는다.
+    ///
+    /// 축은 <see cref="PlayerInputSource"/> 에서 받는다 — 키보드인지 화면 위 조이스틱인지
+    /// 여기서는 구분하지 않는다. 입력을 받지 않는 동안(PC 에서 Esc 로 커서를 푼 동안)은
+    /// 소스가 0 을 내보내므로 여기에 따로 게이트가 없다.
     ///
     /// 속도가 느린 건 의도다. 어두운 방을 더듬는 게임이라 빨리 걸으면 공간이
     /// 좁게 느껴지고, 빛 원뿔을 스쳐 지나가 버린다.
@@ -24,18 +26,23 @@ namespace NHNAI.Game.Player
         [Header("중력")]
         [SerializeField] float gravity = -18f;
 
+        [Header("부품 — 부트스트랩이 채운다")]
+        [SerializeField] PlayerInputSource input;
+
         CharacterController _controller;
         Vector3 _horizontal;
         float _verticalSpeed;
 
         void Awake() => _controller = GetComponent<CharacterController>();
 
+        /// <summary>부트스트랩이 입력을 꽂아 준다.</summary>
+        public void Bind(PlayerInputSource source) => input = source;
+
         void Update()
         {
-            // 커서가 풀린 동안(Esc)에는 멈춘다. 시야가 안 도는데 몸만 움직이면 어지럽다.
-            var input = Cursor.lockState == CursorLockMode.Locked ? ReadMoveInput() : Vector2.zero;
+            var axis = input != null ? input.Move : Vector2.zero;
 
-            var wish = transform.right * input.x + transform.forward * input.y;
+            var wish = transform.right * axis.x + transform.forward * axis.y;
             _horizontal = Vector3.MoveTowards(_horizontal, wish * walkSpeed,
                                               acceleration * Time.deltaTime);
 
@@ -48,21 +55,6 @@ namespace NHNAI.Game.Player
 
             var motion = _horizontal + Vector3.up * _verticalSpeed;
             _controller.Move(motion * Time.deltaTime);
-        }
-
-        static Vector2 ReadMoveInput()
-        {
-            var k = Keyboard.current;
-            if (k == null) return Vector2.zero;
-
-            var x = (k.dKey.isPressed || k.rightArrowKey.isPressed ? 1f : 0f)
-                    - (k.aKey.isPressed || k.leftArrowKey.isPressed ? 1f : 0f);
-            var y = (k.wKey.isPressed || k.upArrowKey.isPressed ? 1f : 0f)
-                    - (k.sKey.isPressed || k.downArrowKey.isPressed ? 1f : 0f);
-
-            var v = new Vector2(x, y);
-            // 정규화하지 않으면 대각선이 √2 배 빨라진다.
-            return v.sqrMagnitude > 1f ? v.normalized : v;
         }
     }
 }

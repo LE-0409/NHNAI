@@ -1,7 +1,6 @@
 using NHNAI.Game.Coins;
 using NHNAI.Game.Slot;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace NHNAI.Game.Player
 {
@@ -9,15 +8,15 @@ namespace NHNAI.Game.Player
     /// 잡은 동전을 들고 다니는 손. 카메라에 붙는다.
     ///
     /// 동선은 셋뿐이다 — 잡는다(<see cref="TryPickUp"/>, Coin.Interact 가 부른다),
-    /// 다시 클릭해 놓는다, 투입구 앵커에 가까이 가져가면 **자동으로** 빨려 들어간다.
-    /// 투입에 별도 클릭이 없는 것은 의도다: 잡은 동전의 용도가 하나뿐이라
+    /// '사용'을 다시 눌러 놓는다, 투입구 앵커에 가까이 가져가면 **자동으로** 빨려 들어간다.
+    /// 투입에 별도 입력이 없는 것은 의도다: 잡은 동전의 용도가 하나뿐이라
     /// '가져가면 넣어진다' 가 가장 짧은 동선이다.
     ///
     /// 인벤토리(<see cref="PlayerCoinInventory"/>)는 이 손을 거쳐 간다 — 넣기는
     /// <see cref="TakeHeld"/> 로 손을 비우고, 꺼내기는 <see cref="TryPickUp"/> 을
     /// 그대로 태워 마우스로 잡았을 때와 같은 들기 상태를 만든다.
     ///
-    /// 드는 동안 <see cref="PlayerInteractor"/> 를 통째로 끈다. 켜 두면 클릭 하나가
+    /// 드는 동안 <see cref="PlayerInteractor"/> 를 통째로 끈다. 켜 두면 '사용' 하나가
     /// '레버 당기기' 와 '동전 놓기' 로 갈라져 어느 쪽이 먹었는지 화면만 봐서는 알 수 없다.
     /// 끄면 조준점 강조도 같이 풀려(인터랙터의 OnDisable 정리) 상태가 화면과 일치한다.
     ///
@@ -59,6 +58,7 @@ namespace NHNAI.Game.Player
         [SerializeField, Range(0f, 1f)] float insertVolume = 0.9f;
 
         [Header("부품 — 부트스트랩이 채운다")]
+        [SerializeField] PlayerInputSource input;
         [SerializeField] PlayerInteractor interactor;
         [SerializeField] SlotMachineView slotView;
         [Tooltip("FBX 의 CoinSlot 트랜스폼. 원점이 슬릿 입구다")]
@@ -82,9 +82,11 @@ namespace NHNAI.Game.Player
         public Quaternion HandRotation => Quaternion.LookRotation(transform.up, -transform.forward);
 
         /// <summary>부트스트랩이 씬에서 만든 부품을 꽂아 준다.</summary>
-        public void Bind(PlayerInteractor playerInteractor, SlotMachineView view, Transform intake,
+        public void Bind(PlayerInputSource source, PlayerInteractor playerInteractor,
+                         SlotMachineView view, Transform intake,
                          AudioClip pickup, AudioClip insert)
         {
+            input = source;
             interactor = playerInteractor;
             slotView = view;
             intakeAnchor = intake;
@@ -127,10 +129,9 @@ namespace NHNAI.Game.Player
         {
             TickInsert(Time.deltaTime);
 
-            // 들고 있을 때의 클릭 = 놓기. 잡은 바로 그 클릭은 프레임 가드로 거른다.
+            // 들고 있을 때의 '사용' = 놓기. 잡은 바로 그 입력은 프레임 가드로 거른다.
             if (_held == null) return;
-            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
-            if (Cursor.lockState != CursorLockMode.Locked) return;
+            if (input == null || !input.InteractPressed) return;
             if (Time.frameCount == _grabFrame) return;
 
             Drop();

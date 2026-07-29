@@ -30,21 +30,20 @@ uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다 (아래 「
 
 화면 방향과 기준 해상도는 문서에만 있는 규칙이 아니라 `ProjectSettings/ProjectSettings.asset`에
 실제로 박혀 있다 — `allowedAutorotateToPortrait`/`PortraitUpsideDown`이 `0`,
-landscape 둘만 `1`이다. 세로를 지원하게 되면 이 표와 설정을 **같이** 고친다.
+landscape 둘만 `1`이고 `defaultScreenOrientation`이 `3`(LandscapeLeft)이라
+자동 회전조차 아니다. 세로를 지원하게 되면 이 표와 설정을 **같이** 고친다.
 
 ### 아직 안 정한 것
 
-**이 저장소는 지금 개발 세팅만 되어 있고 게임 구현물이 없다.**
-
 - **디자인 시스템.** `DESIGN.md`가 아직 없다. 색·간격·타이포 토큰의 정본이 없는 상태다.
-- **게임 장르와 소재.** 무엇을 만들지 정해지지 않았다.
 
-두 가지가 정해지기 전에는 다음을 만들지 않는다.
+토큰이 없는 동안 화면 USS 는 리터럴을 여기저기 흩뿌리는 대신, **루트 클래스의
+`--{화면}-*` 로컬 변수 + `토큰 승격 후보` 주석**으로 한곳에 모은다.
+`Hud.uss` · `MainMenu.uss` · `MobileControls.uss` 가 전부 이 방식이다.
+`DESIGN.md`가 생기면 그 주석이 붙은 값들을 따라 옮기면 된다.
 
-- 게임 규칙 코드 (`Assets/Scripts/`)
-- 화면·컴포넌트 USS (토큰이 없으면 리터럴을 쓰게 되고, 나중에 전부 다시 고쳐야 한다)
-
-**정해지지 않은 것을 추측해서 코드로 만들지 않는다.** 먼저 물어본다.
+**정해지지 않은 것을 추측해서 코드로 만들지 않는다.** 먼저 물어본다 —
+게임 규칙(확률·배당·연출 타이밍)과 토큰 값이 특히 그렇다.
 
 ---
 
@@ -95,6 +94,11 @@ NHNAI/
 │   └── reference/
 │       └── unity-ui-toolkit/  ← UI Toolkit 참조 문서 (README.md 가 목록)
 │
+├── prototype/                 ← HTML/CSS 프로토타입 (Unity 밖, 빌드에 포함 안 됨)
+│   ├── README.md              ← ⚠️ 0단계 전 임시 상태. 치환표는 docs/reference 가 정본
+│   ├── main-menu.html + .css
+│   └── mobile-controls.html + .css
+│
 ├── ArtPipeline/               ← Blender 에셋 파이프라인 (Unity 밖)
 │   ├── lib/lowpoly_lib/       ← 메시 빌더 · 팔레트 · 익스포트 · 프리뷰
 │   ├── project/palette_registry.py  ← 이 프로젝트의 색. 선언 순서 = UV 셀 인덱스
@@ -106,25 +110,51 @@ NHNAI/
     │   ├── Materials/*.mat    ← ArtMaterialLibrary 가 생성
     │   └── Palette/palette.png
     │
+    ├── Audio/*.mp3            ← 효과음 · 배경 앰비언스
+    │
     ├── Scripts/               ← 어셈블리 NHNAI.Game — UI 에 의존하지 않는 게임 코드
     │   ├── NHNAI.Game.asmdef
-    │   └── Player/PlayerLook.cs   ← 마우스 시점
+    │   ├── App/ControlMode.cs      ← PC / 모바일 선택. 씬을 넘어 사는 정적 값
+    │   ├── Player/                 ← 입력 · 이동 · 시점 · 상호작용 · 동전 손과 인벤토리
+    │   │   └── PlayerInputSource.cs   ← **조작이 들어오는 유일한 문**
+    │   ├── Interaction/Interactable.cs
+    │   ├── Coins/Coin.cs
+    │   └── Slot/                   ← 슬롯머신 규칙 · 릴 · 레버 · 배출기 · 전원 · 연출
+    │
+    ├── UI/                    ← 어셈블리 NHNAI.UI (NHNAI.Game 을 참조. 역방향 금지)
+    │   ├── NHNAI.UI.asmdef
+    │   ├── Theme/GameTheme.tss     ← 컴포넌트 USS 를 @import 하는 곳
+    │   ├── Components/             ← 재사용 커스텀 컨트롤 (.cs + .uss)
+    │   │   ├── VirtualJoystick/    ← 모바일 이동
+    │   │   └── TouchLookPad/       ← 모바일 시점
+    │   └── Screens/           ← 셋 다 CellRoom 씬 위에 겹쳐 뜬다 (sortingOrder 순)
+    │       ├── Hud/                ← 조준점 · 동전 개수 (0)
+    │       ├── MobileControls/     ← 조이스틱 · 버튼 (10). PC 를 고르면 접힌다
+    │       └── MainMenu/           ← 제목 · PC / MOBILE 선택 (20). 고르면 페이드 아웃
     │
     ├── Editor/                ← 에디터 툴 (asmdef 없음 = Assembly-CSharp-Editor)
     │   ├── ArtMaterialLibrary.cs  ← .mat 생성 + FBX 머티리얼 리맵
-    │   └── CellRoomBootstrap.cs   ← 독방 씬의 정본
+    │   ├── UiBootstrap.cs         ← PanelSettings 의 정본
+    │   ├── SceneBuildList.cs      ← 빌드 씬 목록. 순서(0번 = 시작 씬)를 여기서 정한다
+    │   └── CellRoomBootstrap.cs   ← 독방 씬의 정본. UI 세 층도 여기서 붙인다
     │
     ├── Shaders/LightCone.shader   ← 전등 아래 빛 기둥
     │
-    ├── Scenes/                ← 전부 부트스트랩이 생성. 손으로 쓰지 않는다
-    │   ├── CellRoom.unity
-    │   └── SampleScene.unity  ← URP 템플릿 잔재. 안 쓴다
+    ├── Scenes/
+    │   └── CellRoom.unity     ← 빌드 씬 목록 0번. **게임의 유일한 씬**
+    │                             부트스트랩이 생성한다. 손으로 쓰지 않는다
     │
     ├── Settings/              ← PC_ / Mobile_ 렌더러 쌍, URP 글로벌 설정
+    │   ├── UI/GamePanelSettings.asset  ← UiBootstrap 이 생성
     │   └── CellRoomVolume.asset   ← 포스트 프로세싱. 부트스트랩이 생성
     │
-    └── InputSystem_Actions.inputactions   ← URP 템플릿 기본. 아직 안 쓴다
+    └── InputSystem_Actions.inputactions
 ```
+
+⚠️ `InputSystem_Actions.inputactions` 는 **지우면 안 된다.** 게임 코드는 이 에셋을
+쓰지 않지만(`PlayerInputSource` 가 저수준 API 를 직접 읽는다), UI Toolkit 런타임이
+포인터 입력을 이 에셋의 `UI` 액션 맵에서 가져간다. 지우면 모바일 조작 UI 가
+손가락을 못 받는다 — 화면은 그려지는데 아무 반응이 없어 원인을 찾기 어렵다.
 
 `Assets/Settings/`의 `PC_RPAsset` · `Mobile_RPAsset`은 품질 레벨과 짝지어져 있다.
 렌더 설정을 바꿀 때 **둘 다** 봐야 한다 — 한쪽만 고치면 플랫폼에 따라 화면이 달라진다.
@@ -139,18 +169,18 @@ NHNAI/
 │
 ├── docs/game-concepts.md      ← 게임 규칙의 정본
 │
-├── prototype/                 ← HTML/CSS 프로토타입 (Unity 밖, 빌드에 포함 안 됨)
-│   ├── README.md              ← 변환 규칙 · CSS→USS 치환표
-│   ├── tokens.css · base.css  ← tokens.uss · base.uss 와 쌍
-│   └── {화면}.html + .css
+├── prototype/
+│   ├── README.md              ← 변환 규칙 · CSS→USS 치환표를 여기로 옮겨 온다
+│   └── tokens.css · base.css  ← tokens.uss · base.uss 와 쌍
 │
-└── Assets/
-    └── UI/                    ← 어셈블리 NHNAI.UI
-        ├── NHNAI.UI.asmdef
-        ├── Theme/             ← tokens.uss · base.uss · GameTheme.tss
-        ├── Components/{이름}/ ← 재사용 컴포넌트 (커스텀 컨트롤). .cs + .uss
-        └── Screens/{화면}/    ← 화면. {화면}.uxml + .uss + .cs
+└── Assets/UI/Theme/
+    └── tokens.uss · base.uss  ← GameTheme.tss 가 @import 한다
 ```
+
+**토큰이 없어서 지금 화면 USS 가 하고 있는 것**: 각 화면 루트 클래스에
+`--{화면}-*` 로컬 변수를 두고 `토큰 승격 후보` 주석을 단다 (`Hud.uss` 가 먼저 쓴 방식).
+리터럴을 여기저기 흩뿌리면 나중에 토큰으로 올릴 때 어디를 고쳐야 할지 알 수 없다.
+`DESIGN.md` 가 생기면 그 주석이 붙은 값들이 토큰으로 올라간다.
 
 ### 어셈블리 의존 방향
 
@@ -185,6 +215,10 @@ NHNAI.Game  ←  NHNAI.UI  ←  Assembly-CSharp-Editor (Assets/Editor)
 `prototype/tokens.css` · `base.css`를 읽어서 동작한다. **0단계가 끝나기 전에는 이 스킬이
 제대로 돌지 않는다.** 그 전에 프로토타입이 필요하면 스킬 없이 직접 쓰고,
 0단계를 마친 뒤 규칙에 맞게 정리한다.
+
+`prototype/` 은 이미 있지만 **1·2단계가 빠진 임시 상태**다 — `tokens.css` 가 없고,
+`README.md` 의 치환표는 `docs/reference/unity-ui-toolkit/css-to-uss-support.md` 를
+가리키기만 한다. 자세한 것은 `prototype/README.md` 의 「지금은 임시 상태다」 절.
 
 ### 새 화면을 만들 때 (0단계 이후)
 
@@ -511,22 +545,70 @@ cd ArtPipeline
 ```
 NHNAI > Setup  > 1. 아트 머티리얼 생성 · 갱신   ← 머티리얼만 다시 만든다
 NHNAI > Setup  > 2. PanelSettings 생성 · 갱신   ← UI Toolkit 런타임 기반
-NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘을 포함해 씬을 통째로 새로 만든다
+NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘과 UI 세 층을 포함해 통째로 만든다
 ```
 
-씬을 만들면 `EditorBuildSettings`에 **자동으로 등록**된다.
-`ProjectSettings/EditorBuildSettings.asset`은 손으로 고치지 않는다.
+씬을 만들면 `EditorBuildSettings`에 **자동으로 등록**되고, 파일이 사라진 씬은
+목록에서 정리된다 (`SceneBuildList`). `ProjectSettings/EditorBuildSettings.asset`은
+손으로 고치지 않는다. **`CellRoom`이 0번**이다 — 빌드된 게임은 목록의 첫 씬으로 열린다.
+
+### 시작 흐름 — 메인메뉴는 씬이 아니라 층이다
+
+**씬은 `CellRoom` 하나뿐이다.** 메인메뉴는 그 위에 겹치는 UIDocument(`sortingOrder: 20`)다.
+씬을 나누지 않은 이유:
+
+- **배경음이 끊기지 않는다.** `BuildAmbience()`가 씬이 열리는 순간부터 틀고 있어서
+  메뉴가 떠 있는 동안에도 그대로 울린다. 씬을 나누면 전환에서 한 번 끊긴다.
+- **뒤로 방이 비친다.** 메뉴 배경은 불투명한 판이 아니라 스크림(`--menu-scrim`)이다.
+  고르는 순간 이 층만 걷혀 방이 드러나므로 "화면이 바뀌었다"가 아니라
+  "메뉴가 걷혔다"로 읽힌다.
+- 씬 하나면 조작 방식을 씬 너머로 들고 다닐 필요가 없다. 정적 보관소 없이
+  `ControlMode`를 인자로 넘긴다.
+
+```
+씬 열림 ─ 방·조명·배경음 살아 있음. 메뉴 층이 그 위를 덮음
+   │      PlayerInputSource 는 아직 아무것도 내보내지 않는다 (_running = false)
+   ▼
+PC / MOBILE 클릭
+   │  ① 메뉴 층에 --hidden → 420ms 페이드 아웃 (SetEnabled(false) 로 입력도 끊는다)
+   │  ② 같은 순간 HudScreen.Begin(mode) · MobileControlsScreen.Begin(mode)
+   │     → 두 층이 520ms 페이드 인. 메뉴가 걷히는 동안 겹쳐 떠오른다
+   ▼ (420ms 뒤)
+메뉴 층 display:none · PlayerInputSource.Begin(mode) ─ 여기서부터 조작이 산다
+```
+
+⚠️ **페이드 길이가 두 곳에 있다.** `MainMenu.uss`의 `transition-duration: 420ms`와
+`MainMenuScreen.FadeOutMs`. USS 는 그림을 그리고 C# 은 그 뒤에 무엇을 할지를 정한다 —
+어긋나면 아직 보이는 채로 접히거나(짧음), 투명해진 메뉴가 남아 첫 조작을 먹는다(김).
+
+모드에 따라 달라지는 것은 셋뿐이다.
+
+| | PC | 모바일 |
+|---|---|---|
+| 커서 | 잠근다 (Esc 로 풀기) | 잠그지 않는다 — UI 를 눌러야 한다 |
+| `MobileControls` 층 | `display: none` 으로 접힌다 | 페이드 인 |
+| HUD 동전 개수 | 우측 **하단** | 우측 **상단** (`.hud--mobile`) — 하단은 버튼 자리다 |
+
+에디터에서도 MOBILE 을 눌러 마우스로 터치 조작을 테스트할 수 있다.
 
 ### 조작
 
-| 입력 | 동작 |
-|---|---|
-| 마우스 | 시야. **좌우는 몸통(`Player`)이, 상하는 카메라가** 돈다 |
-| WASD · 방향키 | 걷기. 몸통 정면 기준이다 |
-| 좌클릭 | 조준한 것과 상호작용 (커서가 잠긴 상태에서만) |
-| E | 들고 있는 동전을 인벤토리에 넣기. 개수는 HUD 우측 하단에 뜬다 |
-| Q | 인벤토리에서 동전 1개 꺼내 들기. 이미 들고 있으면 그 동전은 바닥에 버린다 |
-| Esc | 커서 해제. 다시 클릭하면 잠긴다 |
+| 동작 | PC | 모바일 |
+|---|---|---|
+| 시야 | 마우스. **좌우는 몸통(`Player`)이, 상하는 카메라가** 돈다 | 화면 오른쪽 영역을 끈다 |
+| 걷기 | WASD · 방향키. 몸통 정면 기준 | 왼쪽 아래 조이스틱 |
+| 사용 — 조준한 것과 상호작용 / 들고 있으면 놓기 | 좌클릭 | 오른쪽 아래 큰 버튼 |
+| 넣기 — 들고 있는 동전을 인벤토리로 | E | `넣기` 버튼 |
+| 꺼내기 — 인벤토리에서 1개 꺼내 들기 (들고 있으면 그건 바닥에 버린다) | Q | `꺼내기` 버튼 |
+| 커서 해제 | Esc | — |
+
+**게임에 들어가면 메인메뉴로 돌아가는 길이 없다.** 양쪽 다 그렇다 — 다시 고르려면
+실행을 껐다 켠다. 나중에 일시정지 화면을 만들면 그때 붙인다.
+
+**입력을 추가할 때는 `PlayerInputSource`에 먼저 넣는다.** 게임 스크립트가
+`Keyboard.current` / `Mouse.current` 를 직접 읽으면 PC 에서만 되는 조작이 생기고,
+"커서가 잠긴 동안만 받는다" 같은 규칙이 복제된다 — 복제되면 한 곳만 고쳐진 채 남는다.
+모바일 쪽 값은 `NHNAI.UI`의 조작 화면이 `PressXxx()` / `SetMoveAxis()` 로 밀어 넣는다.
 
 조준점은 **항상 떠 있고**, 쓸 수 있는 것을 보면 **커지고 또렷해진다.** 강조가 안 되면
 거리가 `PlayerInteractor.reach` 를 넘었거나 그 오브젝트에 `Collider` 가 없는 것이다 —
@@ -582,6 +664,9 @@ GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로
 | 드로우 콜이 많음 | Frame Debugger |
 | 프레임 저하 | Unity Profiler |
 | UI 요소가 안 보임 / 스타일이 안 먹음 | Window > UI Toolkit > Debugger |
+| 모바일 조작 UI 가 보이는데 안 눌림 | `InputSystem_Actions.inputactions` 의 `UI` 액션 맵. UI Toolkit 런타임이 포인터를 여기서 가져간다 |
+| 메뉴를 골랐는데 조작이 안 먹음 | `MainMenu.uss` 의 페이드 길이와 `MainMenuScreen.FadeOutMs` 가 어긋났다 |
+| 게임 UI 가 안 나타남 | `HudScreen.Begin` / `MobileControlsScreen.Begin` 이 안 불렸다 — 메뉴가 셋을 다 Bind 받았는지 본다 |
 
 **UI 쪽 "스타일이 안 먹는다"의 1순위 원인은 컴포넌트 USS를 `GameTheme.tss`에 등록하지 않은 것이다.**
 
@@ -597,6 +682,8 @@ GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로
 - **`width` / `height` / `left` / `top`을 애니메이션하지 않는다.** `translate` / `scale` / `rotate`를 쓴다.
 - **`PanelSettings.asset`과 `.unity` 씬을 텍스트로 직접 쓰지 않는다.** `UiBootstrap.cs`를 쓴다.
 - **디자인 시스템과 게임 장르가 정해지기 전에 화면 USS·게임 규칙 코드를 추측해 만들지 않는다.**
+- **게임 스크립트에서 `Keyboard.current` / `Mouse.current` / `Touchscreen`을 직접 읽지 않는다.**
+  전부 `PlayerInputSource`를 거친다. 직접 읽으면 PC 에서만 되는 조작이 생긴다.
 - **`Assets/Scripts/`에 만능 `Utils.cs`를 만들지 않는다.** 기능별 폴더에 자기완결 파일로 둔다.
 - **프로토타입 JS에만 있는 동작을 만들지 않는다.** 정본은 항상 C#이다.
 

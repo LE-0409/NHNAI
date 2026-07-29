@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:nhn="NHNAI.UI.Components">
+    <!-- 모바일 조작 층. 3D 화면과 HUD 위에 덮인다.
+         PC 로 고르면 MobileControlsScreen 이 통째로 display:none 으로 접는다.
+
+         ⚠️ 순서가 곧 겹침 순서다 (USS 에 z-index 가 없다). 시점 패드가 가장 먼저
+         와야 조이스틱·버튼 뒤에 깔린다 — 버튼을 누르러 간 엄지가 시점 패드 위를
+         지나가는데, 패드가 위에 있으면 버튼이 안 눌린다. -->
+    <Style src="project://database/Assets/UI/Screens/MobileControls/MobileControls.uss" />
+
+    <engine:VisualElement name="mobile-root" class="mobile-controls">
+
+        <nhn:TouchLookPad name="look-pad" class="mobile-controls__look-pad"
+                          hint="끌어서 둘러보기" />
+
+        <nhn:VirtualJoystick name="joystick" class="mobile-controls__joystick" />
+
+        <engine:VisualElement name="action-pad" class="action-pad">
+            <engine:VisualElement class="action-pad__minor">
+                <engine:Button name="retrieve"
+                               class="action-button action-button--minor action-button--stacked"
+                               text="꺼내기" />
+                <engine:Button name="store" class="action-button action-button--minor"
+                               text="넣기" />
+            </engine:VisualElement>
+            <engine:Button name="interact" class="action-button action-button--major"
+                           text="사용" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+</engine:UXML>

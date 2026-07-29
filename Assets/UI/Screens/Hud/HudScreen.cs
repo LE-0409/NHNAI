@@ -1,3 +1,4 @@
+using NHNAI.Game.App;
 using NHNAI.Game.Player;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -16,10 +17,13 @@ namespace NHNAI.UI.Hud
     public sealed class HudScreen : MonoBehaviour
     {
         const string ActiveClass = "hud__reticle--active";
+        const string MobileClass = "hud--mobile";
+        const string VisibleClass = "hud--visible";
 
         [SerializeField] PlayerInteractor interactor;
         [SerializeField] PlayerCoinInventory inventory;
 
+        VisualElement _root;
         VisualElement _reticle;
         Label _coinCount;
 
@@ -27,6 +31,9 @@ namespace NHNAI.UI.Hud
         /// UIDocument 가 비주얼 트리를 만드는 시점이 이 컴포넌트의 OnEnable 보다
         /// 늦을 수 있어 미리 캐시하지 않고 처음 쓸 때 잡는다.
         /// </summary>
+        VisualElement Root =>
+            _root ??= GetComponent<UIDocument>().rootVisualElement?.Q<VisualElement>("hud-root");
+
         VisualElement Reticle =>
             _reticle ??= GetComponent<UIDocument>().rootVisualElement?.Q<VisualElement>("reticle");
 
@@ -52,6 +59,23 @@ namespace NHNAI.UI.Hud
         {
             if (interactor != null) interactor.TargetChanged -= OnTargetChanged;
             if (inventory != null) inventory.CountChanged -= OnCountChanged;
+        }
+
+        /// <summary>
+        /// 메인메뉴가 걷히기 시작할 때 불린다. HUD 는 그때까지 <c>opacity: 0</c> 으로
+        /// 숨어 있다가 (Hud.uss) 여기서 떠오른다 — 메뉴 위에 조준점이 떠 있으면
+        /// 아직 시작하지 않은 게임이 이미 시작한 것처럼 보인다.
+        ///
+        /// 모바일에서는 동전 개수를 위로 올린다. 우측 하단은 행동 버튼이 차지하는
+        /// 자리라 그대로 두면 '사용' 버튼 뒤에 숨는다.
+        /// </summary>
+        public void Begin(ControlMode mode)
+        {
+            var root = Root;
+            if (root == null) return;
+
+            root.EnableInClassList(MobileClass, mode == ControlMode.Mobile);
+            root.AddToClassList(VisibleClass);
         }
 
         void OnTargetChanged(bool hasTarget)

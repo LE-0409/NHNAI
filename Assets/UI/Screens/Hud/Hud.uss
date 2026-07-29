@@ -17,6 +17,19 @@
     flex-grow: 1;
     align-items: center;
     justify-content: center;
+
+    /* 메인메뉴가 걷히기 전까지는 숨어 있다. 메뉴 위에 조준점이 떠 있으면
+       아직 시작하지 않은 게임이 이미 시작한 것처럼 보인다.
+       HudScreen.Begin 이 --visible 을 붙여 떠오르게 한다.
+       transition 계열은 var() 를 쓰지 않는다 — CLAUDE.md */
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 520ms;
+    transition-timing-function: ease-out-cubic;
+}
+
+.hud--visible {
+    opacity: 1;
 }
 
 /* 항상 떠 있되 평소에는 희미하고 작다 — 어두운 방을 바라보는 장면을 방해하지
@@ -51,4 +64,12 @@
     color: var(--hud-coin-count-color);
     font-size: var(--hud-coin-count-size);
     -unity-text-align: middle-right;
+}
+
+/* 모바일은 우측 하단이 행동 버튼 자리다 (MobileControls.uss 의 .action-pad).
+   그대로 두면 '사용' 버튼 뒤에 숨는다. 엄지가 닿지 않는 위로 올린다.
+   HudScreen 이 조작 방식을 보고 이 클래스를 붙인다. */
+.hud--mobile .hud__coin-count {
+    top: 24px;
+    bottom: auto;
 }

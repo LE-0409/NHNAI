@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:engine="UnityEngine.UIElements">
+    <!-- 메인메뉴. **독방 씬 위에 덮이는 층**이다 — 별도 씬이 아니다.
+         뒤로 방이 비쳐 보이고, 고르는 순간 이 층만 사라지면서 게임이 시작된다.
+         배경음은 씬이 열리는 순간부터 이미 울리고 있다 (CellRoomBootstrap.BuildAmbience).
+
+         제목과 두 버튼을 세로로 쌓는다. 버튼에는 글자만 둔다. -->
+    <Style src="project://database/Assets/UI/Screens/MainMenu/MainMenu.uss" />
+
+    <engine:VisualElement name="menu-root" class="main-menu">
+        <engine:Label class="main-menu__title" text="SLOT MACHINE" picking-mode="Ignore" />
+        <engine:Button name="play-pc" class="menu-button" text="PC" />
+        <engine:Button name="play-mobile" class="menu-button" text="MOBILE" />
+    </engine:VisualElement>
+</engine:UXML>

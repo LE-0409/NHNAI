@@ -1,0 +1,29 @@
+/* 화면 위 조이스틱 — 생김새와 크기.
+ *
+ * **자리(position/left/bottom)는 여기서 정하지 않는다.** 쓰는 화면이 정한다
+ * (MobileControls.uss). 컴포넌트는 어디에 놓여도 같은 모양이어야 한다.
+ *
+ * 색은 조상이 물려주는 --touch-* 로컬 변수에서 받는다. 지금 그 변수를 정의하는
+ * 곳은 MobileControls.uss 의 .mobile-controls 하나뿐이다. DESIGN.md 가 생기면
+ * 전부 tokens.uss 의 토큰으로 올라간다 (prototype/README.md 참조). */
+
+.joystick {
+    width: 248px;
+    height: 248px;
+    align-items: center;
+    justify-content: center;
+
+    border-width: 1px;
+    border-color: var(--touch-line-color);
+    border-radius: 124px;
+    background-color: var(--touch-surface);
+}
+
+/* ⚠️ translate 를 여기서 정의하지 않는다. VirtualJoystick.cs 가 인라인으로 쓰고,
+   인라인이 USS 를 이기므로 여기 값은 조용히 무시된다 (CLAUDE.md). */
+.joystick__knob {
+    width: 96px;
+    height: 96px;
+    border-radius: 48px;
+    background-color: var(--touch-knob-color);
+}

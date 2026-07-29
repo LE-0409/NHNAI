@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using NHNAI.Game.Coins;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace NHNAI.Game.Player
 {
     /// <summary>
-    /// 동전 인벤토리 — E 로 손의 동전을 넣고, Q 로 하나 꺼내 든다.
+    /// 동전 인벤토리 — '넣기'로 손의 동전을 넣고, '꺼내기'로 하나 꺼내 든다
+    /// (PC 는 E · Q, 모바일은 화면 위 버튼).
     ///
-    /// 꺼낸 동전은 마우스로 잡았을 때와 같은 상태다 — <see cref="PlayerCoinCarrier.TryPickUp"/>
-    /// 를 그대로 태우므로 시선 추적·투입구 흡입·클릭으로 놓기가 전부 동일하게 동작한다.
-    /// 이미 들고 있는데 Q 를 누르면 들고 있던 동전을 바닥에 버리고 새로 든다.
+    /// 꺼낸 동전은 직접 잡았을 때와 같은 상태다 — <see cref="PlayerCoinCarrier.TryPickUp"/>
+    /// 를 그대로 태우므로 시선 추적·투입구 흡입·'사용'으로 놓기가 전부 동일하게 동작한다.
+    /// 이미 들고 있는데 '꺼내기'를 누르면 들고 있던 동전을 바닥에 버리고 새로 든다.
     ///
     /// 보관은 파괴가 아니라 **비활성화**다. 동전 인스턴스를 스택에 그대로 쌓아 두면
     /// 꺼낼 때 템플릿을 다시 복제할 필요가 없고, 넣은 동전이 그대로 돌아온다는
@@ -23,6 +23,7 @@ namespace NHNAI.Game.Player
     public sealed class PlayerCoinInventory : MonoBehaviour
     {
         [Header("부품 — 부트스트랩이 채운다")]
+        [SerializeField] PlayerInputSource input;
         [Tooltip("손. 넣을 동전을 여기서 받고, 꺼낸 동전을 여기에 쥐여 준다")]
         [SerializeField] PlayerCoinCarrier carrier;
 
@@ -35,17 +36,19 @@ namespace NHNAI.Game.Player
         public event Action<int> CountChanged;
 
         /// <summary>부트스트랩이 씬에서 만든 부품을 꽂아 준다.</summary>
-        public void Bind(PlayerCoinCarrier coinCarrier) => carrier = coinCarrier;
+        public void Bind(PlayerInputSource source, PlayerCoinCarrier coinCarrier)
+        {
+            input = source;
+            carrier = coinCarrier;
+        }
 
         void Update()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard == null || carrier == null) return;
-            // 커서가 풀린 상태(Esc)에서는 시점·클릭과 마찬가지로 입력을 받지 않는다.
-            if (Cursor.lockState != CursorLockMode.Locked) return;
+            if (input == null || carrier == null) return;
 
-            if (keyboard.eKey.wasPressedThisFrame) Store();
-            else if (keyboard.qKey.wasPressedThisFrame) Retrieve();
+            // 입력을 받지 않는 동안(PC 에서 커서가 풀린 동안)은 소스가 전부 거짓을 내보낸다.
+            if (input.StorePressed) Store();
+            else if (input.RetrievePressed) Retrieve();
         }
 
         void Store()

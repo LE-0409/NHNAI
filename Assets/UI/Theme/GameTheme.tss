@@ -5,3 +5,6 @@
  * 화면(Screens) 전용 USS 는 여기 넣지 않는다. */
 
 @import url("unity-theme://default");
+
+@import url("project://database/Assets/UI/Components/VirtualJoystick/VirtualJoystick.uss");
+@import url("project://database/Assets/UI/Components/TouchLookPad/TouchLookPad.uss");

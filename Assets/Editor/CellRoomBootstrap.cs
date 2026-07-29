@@ -1,12 +1,12 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using NHNAI.Game.Coins;
 using NHNAI.Game.Player;
 using NHNAI.Game.Slot;
 using NHNAI.UI.Hud;
+using NHNAI.UI.MainMenu;
+using NHNAI.UI.MobileControls;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -30,6 +30,8 @@ namespace NHNAI.EditorTools
         const string ProfilePath = "Assets/Settings/CellRoomVolume.asset";
         const string FbxDir = "Assets/Art/Environment";
         const string HudUxmlPath = "Assets/UI/Screens/Hud/Hud.uxml";
+        const string MobileControlsUxmlPath = "Assets/UI/Screens/MobileControls/MobileControls.uxml";
+        const string MainMenuUxmlPath = "Assets/UI/Screens/MainMenu/MainMenu.uxml";
         const string CoinClipPath = "Assets/Audio/CoinDispense.mp3";
         const string ReelTickClipPath = "Assets/Audio/ReelTick.mp3";
         const string CoinPickupClipPath = "Assets/Audio/CoinPickup.mp3";
@@ -83,6 +85,7 @@ namespace NHNAI.EditorTools
         /// <summary>플레이어 쪽 배선 묶음. 동전 시스템이 카메라·충돌체를 필요로 한다.</summary>
         struct PlayerRig
         {
+            public PlayerInputSource Input; // 조작이 들어오는 유일한 문 (PC · 모바일 공통)
             public PlayerInteractor Interactor;
             public Transform CameraTransform;
             public Collider Body;           // CharacterController — 동전과의 충돌 무시용
@@ -98,18 +101,28 @@ namespace NHNAI.EditorTools
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            // HUD · 모바일 조작 · 메인메뉴가 같은 패널을 쓴다. 한 번만 만들어 나눠 준다.
+            var panel = UiBootstrap.Build();
+
             var machineRig = BuildEnvironment();
             BuildLighting();
             BuildAmbience();
-            var playerRig = BuildCamera();
+            var playerRig = BuildCamera(panel);
+            // 조작 층은 씬에 늘 있고, 메인메뉴가 걷힐 때 PC/모바일에 따라 갈린다.
+            var mobileControls = BuildMobileControls(playerRig.Input, panel);
             // 동전은 기계(앵커·배출기)와 플레이어(손·충돌체) 양쪽에 걸치므로 맨 뒤다.
             BuildCoins(machineRig, playerRig);
+            // 메인메뉴는 위 셋(입력·HUD·조작 층)을 전부 알아야 하므로 마지막이다.
+            BuildMainMenu(playerRig, mobileControls, panel);
             BuildPostProcessing();
             ConfigureRenderSettings();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath)!);
             EditorSceneManager.SaveScene(scene, ScenePath);
-            RegisterInBuildSettings(ScenePath);
+            // 사라진 씬(예전 MainMenu.unity)이 목록에 남아 0번을 차지하면 빌드가
+            // 존재하지 않는 씬으로 열린다. 정리하고 이 씬을 첫 번째로 둔다.
+            SceneBuildList.Prune();
+            SceneBuildList.Ensure(ScenePath, 0);
 
             Debug.Log($"[NHNAI] 독방 씬 생성 완료 → {ScenePath}\n" +
                       "룩 조정은 Volume 프로파일과 SpotLight 세기부터 만진다.");
@@ -591,7 +604,7 @@ namespace NHNAI.EditorTools
 
         // --- 카메라 ----------------------------------------------------------
 
-        static PlayerRig BuildCamera()
+        static PlayerRig BuildCamera(PanelSettings panel)
         {
             // 1인칭. 플레이어는 자신을 볼 수 없어서 보이는 몸은 없지만, 걷고 부딪히려면
             // 충돌체가 필요하다. **몸통이 좌우(yaw)를 맡고 카메라가 상하(pitch)를 맡는다** —
@@ -612,7 +625,11 @@ namespace NHNAI.EditorTools
             controller.slopeLimit = 45f;
             controller.stepOffset = 0.3f;
 
-            body.AddComponent<PlayerMove>();
+            // 조작이 들어오는 유일한 문. 키보드·마우스든 화면 위 조이스틱이든 여기를
+            // 거친다 — 아래 컴포넌트들은 어느 쪽인지 모른다.
+            var input = body.AddComponent<PlayerInputSource>();
+
+            body.AddComponent<PlayerMove>().Bind(input);
 
             var go = new GameObject("PlayerCamera");
             go.tag = "MainCamera";
@@ -641,15 +658,17 @@ namespace NHNAI.EditorTools
             data.requiresDepthTexture = true;
 
             go.AddComponent<AudioListener>();
-            // 마우스 시점. 좌우는 몸통에, 상하는 카메라에 건다.
-            go.AddComponent<PlayerLook>().Bind(body.transform);
+            // 시점. 좌우는 몸통에, 상하는 카메라에 건다.
+            go.AddComponent<PlayerLook>().Bind(body.transform, input);
 
-            // 화면 중앙 조준 + 클릭. HUD 가 이 컴포넌트를 구독한다.
+            // 화면 중앙 조준 + '사용'. HUD 가 이 컴포넌트를 구독한다.
             var interactor = go.AddComponent<PlayerInteractor>();
-            var hud = BuildHud(interactor);
+            interactor.Bind(input);
+            var hud = BuildHud(interactor, panel);
 
             return new PlayerRig
             {
+                Input = input,
                 Interactor = interactor,
                 CameraTransform = go.transform,
                 Body = controller,
@@ -682,11 +701,12 @@ namespace NHNAI.EditorTools
 
             // 잡은 동전을 들고 다니는 손. 카메라에 붙는다 — holdOffset 이 카메라 로컬이다.
             var carrier = player.CameraTransform.gameObject.AddComponent<PlayerCoinCarrier>();
-            carrier.Bind(player.Interactor, machine.View, machine.CoinSlot, pickupClip, insertClip);
+            carrier.Bind(player.Input, player.Interactor, machine.View, machine.CoinSlot,
+                         pickupClip, insertClip);
 
-            // E/Q 로 동전을 넣고 꺼내는 인벤토리. 손과 같은 오브젝트에 산다.
+            // 동전을 넣고 꺼내는 인벤토리 (PC 는 E/Q). 손과 같은 오브젝트에 산다.
             var inventory = player.CameraTransform.gameObject.AddComponent<PlayerCoinInventory>();
-            inventory.Bind(carrier);
+            inventory.Bind(player.Input, carrier);
             if (player.Hud != null) player.Hud.Bind(inventory);
 
             var physics = BuildCoinPhysicsMaterial();
@@ -780,7 +800,7 @@ namespace NHNAI.EditorTools
 
         // --- HUD --------------------------------------------------------------
 
-        static HudScreen BuildHud(PlayerInteractor interactor)
+        static HudScreen BuildHud(PlayerInteractor interactor, PanelSettings panel)
         {
             var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudUxmlPath);
             if (uxml == null)
@@ -791,12 +811,79 @@ namespace NHNAI.EditorTools
 
             var go = new GameObject("Hud");
             var doc = go.AddComponent<UIDocument>();
-            doc.panelSettings = UiBootstrap.Build();
+            doc.panelSettings = panel;
             doc.visualTreeAsset = uxml;
 
             var hud = go.AddComponent<HudScreen>();
             hud.Bind(interactor);
             return hud;
+        }
+
+        // --- 모바일 조작 -------------------------------------------------------
+
+        /// <summary>
+        /// 화면 위 조이스틱 · 시점 패드 · 버튼. **PC 로 고른 판에서도 씬에는 있다** —
+        /// 씬은 생성 시점에 고정되고 조작 방식은 실행 중에 정해지므로,
+        /// 숨는 판단은 <see cref="MobileControlsScreen"/> 이 런타임에 한다.
+        ///
+        /// HUD 와 같은 PanelSettings 를 쓴다. 같은 패널을 공유하는 UIDocument 는
+        /// <c>sortingOrder</c> 로 겹침이 정해진다 — 조작부가 HUD(0) 보다 위여야
+        /// 조준점 · 동전 개수에 손가락이 먹히지 않는다.
+        /// </summary>
+        static MobileControlsScreen BuildMobileControls(PlayerInputSource input, PanelSettings panel)
+        {
+            var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(MobileControlsUxmlPath);
+            if (uxml == null)
+            {
+                Debug.LogError($"[NHNAI] 모바일 조작 UXML 이 없다: {MobileControlsUxmlPath}");
+                return null;
+            }
+
+            var go = new GameObject("MobileControls");
+            var doc = go.AddComponent<UIDocument>();
+            doc.panelSettings = panel;
+            doc.visualTreeAsset = uxml;
+            doc.sortingOrder = 10f;
+
+            var screen = go.AddComponent<MobileControlsScreen>();
+            screen.Bind(input);
+            return screen;
+        }
+
+        // --- 메인메뉴 ----------------------------------------------------------
+
+        /// <summary>
+        /// 메인메뉴. **별도 씬이 아니라 이 씬 위에 덮이는 층이다.**
+        ///
+        /// 그래서 방 · 조명 · 배경음이 메뉴가 떠 있는 동안에도 그대로 살아 있다 —
+        /// 배경음을 메뉴용으로 따로 재생할 필요가 없고(<see cref="BuildAmbience"/> 가
+        /// 이미 씬이 열리는 순간부터 틀고 있다), 고른 순간 이 층만 걷히면 그대로
+        /// 게임이 된다. 씬을 나누면 그 사이에서 소리가 한 번 끊긴다.
+        ///
+        /// 조작은 메뉴가 완전히 사라진 뒤에 살아난다 —
+        /// <see cref="PlayerInputSource"/> 는 <c>Begin</c> 전까지 아무것도 내보내지 않는다.
+        ///
+        /// <c>sortingOrder</c> 는 조작 층(10)보다 위다. 메뉴가 떠 있는 동안 그 밑의
+        /// 조작부가 손가락을 먼저 받으면 안 된다.
+        /// </summary>
+        static void BuildMainMenu(PlayerRig player, MobileControlsScreen mobileControls,
+                                  PanelSettings panel)
+        {
+            var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(MainMenuUxmlPath);
+            if (uxml == null)
+            {
+                Debug.LogError($"[NHNAI] 메인메뉴 UXML 이 없다: {MainMenuUxmlPath}\n" +
+                               "메뉴가 없으면 조작을 고를 수 없어 게임이 시작되지 않는다.");
+                return;
+            }
+
+            var go = new GameObject("MainMenu");
+            var doc = go.AddComponent<UIDocument>();
+            doc.panelSettings = panel;
+            doc.visualTreeAsset = uxml;
+            doc.sortingOrder = 20f;
+
+            go.AddComponent<MainMenuScreen>().Bind(player.Input, player.Hud, mobileControls);
         }
 
         // --- 포스트 프로세싱 --------------------------------------------------
@@ -845,16 +932,6 @@ namespace NHNAI.EditorTools
             volume.isGlobal = true;
             volume.priority = 0f;
             volume.sharedProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
-        }
-
-        // --- 빌드 설정 --------------------------------------------------------
-
-        static void RegisterInBuildSettings(string path)
-        {
-            var scenes = EditorBuildSettings.scenes.ToList();
-            if (scenes.Any(s => s.path == path)) return;
-            scenes.Add(new EditorBuildSettingsScene(path, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
     }
 }

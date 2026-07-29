@@ -1,11 +1,12 @@
 using NHNAI.Game.Interaction;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace NHNAI.Game.Player
 {
     /// <summary>
-    /// 화면 중앙에서 앞으로 레이캐스트해 쓸 수 있는 것을 찾고, 클릭하면 실행한다.
+    /// 화면 중앙에서 앞으로 레이캐스트해 쓸 수 있는 것을 찾고, '사용'이 눌리면 실행한다.
+    /// PC 는 좌클릭, 모바일은 화면 위 버튼이다 — 어느 쪽인지는
+    /// <see cref="PlayerInputSource"/> 가 흡수하므로 여기서는 구분하지 않는다.
     ///
     /// 조준 상태는 <see cref="TargetChanged"/> 로 내보낸다. HUD 를 직접 부르지 않는 이유는
     /// 어셈블리 방향 때문이다 — NHNAI.UI 가 NHNAI.Game 을 참조하지 그 반대가 아니다.
@@ -28,6 +29,9 @@ namespace NHNAI.Game.Player
         [Tooltip("정밀 레이가 빗나갔을 때의 보조 반경(m). 바닥의 동전처럼 작은 것을 노리기 쉽게 한다")]
         [SerializeField] float aimAssistRadius = 0.06f;
 
+        [Header("부품 — 부트스트랩이 채운다")]
+        [SerializeField] PlayerInputSource input;
+
         Camera _camera;
         Interactable _target;
 
@@ -39,6 +43,9 @@ namespace NHNAI.Game.Player
 
         void Awake() => _camera = GetComponent<Camera>();
 
+        /// <summary>부트스트랩이 입력을 꽂아 준다.</summary>
+        public void Bind(PlayerInputSource source) => input = source;
+
         void Update()
         {
             var found = Probe();
@@ -49,10 +56,8 @@ namespace NHNAI.Game.Player
                 TargetChanged?.Invoke(_target != null);
             }
 
-            if (_target != null
-                && Mouse.current != null
-                && Mouse.current.leftButton.wasPressedThisFrame
-                && Cursor.lockState == CursorLockMode.Locked)
+            // 입력을 받지 않는 동안(PC 에서 커서가 풀린 동안)은 소스가 거짓을 내보낸다.
+            if (_target != null && input != null && input.InteractPressed)
             {
                 _target.Interact();
             }

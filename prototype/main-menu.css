@@ -1,0 +1,108 @@
+/* 메인메뉴 — 제목 하나와 선택지 둘을 세로로 쌓는다.
+ *
+ * **독방 씬 위에 덮이는 층이다.** 배경을 불투명하게 칠하지 않고 어둡게 덮기만 한다 —
+ * 뒤로 방과 전등이 비쳐야 고른 순간의 페이드가 "메뉴가 걷히고 방이 드러나는" 것으로
+ * 읽힌다. 완전히 가리면 그냥 화면이 바뀐 것이 된다.
+ *
+ * DESIGN.md 가 아직 없어 토큰이 없다. Hud.uss 와 같은 방식으로 루트 클래스에
+ * --menu-* 로컬 변수를 두고 승격 후보로 표시한다. prototype/README.md 참조. */
+
+/* ↓ 브라우저 전용 리셋. UI Toolkit 은 기본이 flex 라 USS 로 옮기지 않는다. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    display: flex;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+/* Unity 에서는 여기에 3D 방이 있다. 스크림이 덮는 정도를 보려고 깔아 둔 판이다 */
+.stage {
+    display: flex;
+    flex-grow: 1;
+    background-color: rgb(26, 25, 22);
+}
+/* ↑ 여기까지 리셋 */
+
+.main-menu {
+    /* 토큰 승격 후보: 메뉴가 방을 덮는 정도. 높이면 글자가 잘 읽히고 방이 지워진다 */
+    --menu-scrim: rgba(4, 4, 6, 0.62);
+    /* 토큰 승격 후보: 제목 색 — HUD 조준점과 같은 흰색 (완전한 1.0 은 전구 전용) */
+    --menu-title-color: rgb(226, 226, 226);
+    /* 토큰 승격 후보: 버튼 글자 */
+    --menu-text-color: rgb(198, 198, 202);
+    /* 토큰 승격 후보: 테두리 — 쉴 때 */
+    --menu-line-color: rgb(96, 96, 102);
+    /* 토큰 승격 후보: 테두리 — 가리켰을 때 */
+    --menu-line-active-color: rgb(226, 226, 226);
+    /* 토큰 승격 후보: 표면 — 가리켰을 때 */
+    --menu-surface-active: rgba(226, 226, 226, 0.09);
+
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--menu-scrim);
+
+    /* 고르면 이 층 전체가 사라진다 (.main-menu--hidden). 게임 UI 는 같은 동안
+       반대로 나타나 두 연출이 겹친다.
+       ⚠️ 이 길이는 MainMenuScreen.FadeOutMs 와 같아야 한다 — 스크립트가 이 시간
+       뒤에 층을 접고 게임을 시작한다. */
+    transition-property: opacity;
+    transition-duration: 420ms;
+    /* → USS: ease-out-cubic */
+    transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.main-menu--hidden {
+    opacity: 0;
+}
+
+/* 대문자는 문자열 자체로 만든다 — USS 에 text-transform 이 없다.
+   자간을 크게 벌려 마퀴 간판처럼 읽히게 한다. */
+.main-menu__title {
+    font-size: 104px;
+    letter-spacing: 18px;
+    font-weight: bold;              /* → USS: -unity-font-style: bold */
+    color: var(--menu-title-color);
+    /* 자간이 마지막 글자 뒤에도 붙어 우로 밀린다. 그만큼 당겨 광학적으로 맞춘다 */
+    margin-right: -18px;
+    /* gap 이 없다 — 제목과 첫 버튼 사이는 여기서 벌린다 */
+    margin-bottom: 72px;
+}
+
+.menu-button {
+    width: 360px;
+    height: 104px;
+    display: flex;                  /* → USS: 기본이 flex 라 적지 않는다 */
+    align-items: center;
+    justify-content: center;
+
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;              /* USS 는 border 단축 속성이 없다. 항상 나눠 쓴다 */
+    border-style: solid;            /* → USS: border-style 이 없다. 적지 않는다 */
+    border-color: var(--menu-line-color);
+    border-radius: 2px;
+
+    margin-bottom: 24px;
+
+    color: var(--menu-text-color);
+    font-size: 40px;
+    letter-spacing: 6px;
+    font-weight: bold;              /* → USS: -unity-font-style: bold */
+
+    /* transition 계열은 var() 를 쓰지 않는다 — CLAUDE.md */
+    transition-property: background-color, border-color, scale;
+    transition-duration: 140ms, 140ms, 140ms;
+    /* → USS: ease-out-cubic */
+    transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.menu-button:hover {
+    background-color: var(--menu-surface-active);
+    border-color: var(--menu-line-active-color);
+    scale: 1.03;
+}
+
+/* 눌린 순간은 살짝 들어간다. 터치에는 hover 가 없어 이게 유일한 확인이다 */
+.menu-button:active {
+    scale: 0.98;
+}

@@ -1,0 +1,33 @@
+/* 시점 패드 — 보이지 않는 판과 안내 문구.
+ *
+ * **자리와 크기는 여기서 정하지 않는다.** 쓰는 화면이 정한다 (MobileControls.uss) —
+ * 화면의 어느 만큼을 시점 영역으로 줄지는 화면의 결정이다.
+ *
+ * 배경을 칠하지 않는다. 3D 화면 위에 덮이는 판이라 칠하면 게임이 가려진다.
+ *
+ * 색은 조상이 물려주는 --touch-* 로컬 변수에서 받는다 (VirtualJoystick.uss 와 같다). */
+
+.look-pad {
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* 처음 한 번만 보인다. 흐리게 둔다 — 안내가 방보다 눈에 띄면 안 된다.
+   아래쪽에 두어 화면 중앙(조준점)과 슬롯머신을 가리지 않는다. */
+.look-pad__hint {
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--touch-text-color);
+    opacity: 0.28;
+    margin-bottom: 300px;
+
+    /* transition 계열은 var() 를 쓰지 않는다 — CLAUDE.md */
+    transition-property: opacity;
+    transition-duration: 320ms;
+    transition-timing-function: ease-out-cubic;
+}
+
+/* 한 번 끌면 붙는다. 떼어 내지 않으므로 다시 나오지 않는다. */
+.look-pad__hint--gone {
+    opacity: 0;
+}
