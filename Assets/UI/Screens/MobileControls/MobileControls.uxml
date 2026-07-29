@@ -5,13 +5,18 @@
 
          ⚠️ 순서가 곧 겹침 순서다 (USS 에 z-index 가 없다). 시점 패드가 가장 먼저
          와야 조이스틱·버튼 뒤에 깔린다 — 버튼을 누르러 간 엄지가 시점 패드 위를
-         지나가는데, 패드가 위에 있으면 버튼이 안 눌린다. -->
+         지나가는데, 패드가 위에 있으면 버튼이 안 눌린다.
+
+         ⚠️ 글자는 **영어로 쓴다.** PanelSettings 에 FontAsset 을 지정하지 않아
+         UI Toolkit 기본 폰트(라틴 전용)로 그려지는데, 에디터와 달리 네이티브·WebGL
+         빌드에는 OS 폰트 폴백이 없다 — 한글을 적으면 오류도 로그도 없이 **빈 버튼**이
+         된다. 한글이 필요해지면 한글 FontAsset 을 만들어 PanelSettings 에 먼저 물린다. -->
     <Style src="project://database/Assets/UI/Screens/MobileControls/MobileControls.uss" />
 
     <engine:VisualElement name="mobile-root" class="mobile-controls">
 
         <nhn:TouchLookPad name="look-pad" class="mobile-controls__look-pad"
-                          hint="끌어서 둘러보기" />
+                          hint="DRAG TO LOOK" />
 
         <nhn:VirtualJoystick name="joystick" class="mobile-controls__joystick" />
 
@@ -19,12 +24,12 @@
             <engine:VisualElement class="action-pad__minor">
                 <engine:Button name="retrieve"
                                class="action-button action-button--minor action-button--stacked"
-                               text="꺼내기" />
+                               text="TAKE" />
                 <engine:Button name="store" class="action-button action-button--minor"
-                               text="넣기" />
+                               text="STORE" />
             </engine:VisualElement>
             <engine:Button name="interact" class="action-button action-button--major"
-                           text="사용" />
+                           text="USE" />
         </engine:VisualElement>
     </engine:VisualElement>
 </engine:UXML>
