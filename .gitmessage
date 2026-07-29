@@ -23,6 +23,7 @@
 #   art        Blender 파이프라인·3D 에셋 (ArtPipeline/, Assets/Art/)
 #   prototype  HTML 프로토타입 (prototype/)
 #   unity      프로젝트 설정·패키지 (ProjectSettings, manifest.json, asmdef)
+#   webgl      WebGL 빌드·배포 (Assets/WebGLTemplates/, Tools/deploy-webgl.ps1)
 #
 # ── 규칙 ────────────────────────────────────────────────────
 #   · 제목은 한국어. 마침표 없이. 72자 이내.

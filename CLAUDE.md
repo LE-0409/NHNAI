@@ -24,7 +24,7 @@ uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다 (아래 「
 | 렌더 파이프라인 | URP 3D (PC · Mobile 렌더러 분리) |
 | UI | UI Toolkit 기본, uGUI 예외 허용 |
 | 입력 | Input System (`activeInputHandler: 1`) |
-| 빌드 타깃 | PC (Windows/Mac) + 모바일 (Android/iOS) |
+| 빌드 타깃 | PC (Windows/Mac) + 모바일 (Android/iOS) + WebGL (GitHub Pages) |
 | 화면 방향 | **landscape 고정.** 세로 모드 미지원 |
 | 기준 해상도 | 1920 x 1080 |
 
@@ -97,7 +97,11 @@ NHNAI/
 ├── prototype/                 ← HTML/CSS 프로토타입 (Unity 밖, 빌드에 포함 안 됨)
 │   ├── README.md              ← ⚠️ 0단계 전 임시 상태. 치환표는 docs/reference 가 정본
 │   ├── main-menu.html + .css
-│   └── mobile-controls.html + .css
+│   ├── mobile-controls.html + .css
+│   └── rotate-gate.html + .css
+│
+├── Tools/
+│   └── deploy-webgl.ps1       ← WebGL 빌드를 GitHub Pages 브랜치로 올린다
 │
 ├── ArtPipeline/               ← Blender 에셋 파이프라인 (Unity 밖)
 │   ├── lib/lowpoly_lib/       ← 메시 빌더 · 팔레트 · 익스포트 · 프리뷰
@@ -127,10 +131,14 @@ NHNAI/
     │   ├── Components/             ← 재사용 커스텀 컨트롤 (.cs + .uss)
     │   │   ├── VirtualJoystick/    ← 모바일 이동
     │   │   └── TouchLookPad/       ← 모바일 시점
-    │   └── Screens/           ← 셋 다 CellRoom 씬 위에 겹쳐 뜬다 (sortingOrder 순)
+    │   └── Screens/           ← 넷 다 CellRoom 씬 위에 겹쳐 뜬다 (sortingOrder 순)
     │       ├── Hud/                ← 조준점 · 동전 개수 (0)
     │       ├── MobileControls/     ← 조이스틱 · 버튼 (10). PC 를 고르면 접힌다
-    │       └── MainMenu/           ← 제목 · PC / MOBILE 선택 (20). 고르면 페이드 아웃
+    │       ├── MainMenu/           ← 제목 · PC / MOBILE 선택 (20). 고르면 페이드 아웃
+    │       └── RotateGate/         ← 세로로 들면 덮는 안내 (30). 가로면 display:none
+    │
+    ├── WebGLTemplates/NHNAI/  ← WebGL 페이지. 캔버스가 뷰포트를 꽉 채운다
+    │                             빌드에는 안 들어간다 — 페이지를 감싸는 껍데기다
     │
     ├── Editor/                ← 에디터 툴 (asmdef 없음 = Assembly-CSharp-Editor)
     │   ├── ArtMaterialLibrary.cs  ← .mat 생성 + FBX 머티리얼 리맵
@@ -555,6 +563,8 @@ NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘과 UI 세 층을 �
 ### 시작 흐름 — 메인메뉴는 씬이 아니라 층이다
 
 **씬은 `CellRoom` 하나뿐이다.** 메인메뉴는 그 위에 겹치는 UIDocument(`sortingOrder: 20`)다.
+(그 위에 하나 더 있다 — 세로로 들면 `RotateGate`(30)가 메뉴까지 덮는다. 세로로 고른 뒤
+그대로 시작하면 조작 UI 가 안 맞는 자리에 놓인 채 첫 화면을 맞기 때문이다.)
 씬을 나누지 않은 이유:
 
 - **배경음이 끊기지 않는다.** `BuildAmbience()`가 씬이 열리는 순간부터 틀고 있어서
@@ -573,6 +583,8 @@ PC / MOBILE 클릭
    │  ① 메뉴 층에 --hidden → 420ms 페이드 아웃 (SetEnabled(false) 로 입력도 끊는다)
    │  ② 같은 순간 HudScreen.Begin(mode) · MobileControlsScreen.Begin(mode)
    │     → 두 층이 520ms 페이드 인. 메뉴가 걷히는 동안 겹쳐 떠오른다
+   │  ③ 같은 순간 PlayerInputSource.ClaimCursor(mode) ─ 커서 잠금**만** 한다
+   │     조작은 아직 안 산다. 이것만 클릭 핸들러 안에 있는 이유는 아래 ⚠️
    ▼ (420ms 뒤)
 메뉴 층 display:none · PlayerInputSource.Begin(mode) ─ 여기서부터 조작이 산다
 ```
@@ -580,6 +592,12 @@ PC / MOBILE 클릭
 ⚠️ **페이드 길이가 두 곳에 있다.** `MainMenu.uss`의 `transition-duration: 420ms`와
 `MainMenuScreen.FadeOutMs`. USS 는 그림을 그리고 C# 은 그 뒤에 무엇을 할지를 정한다 —
 어긋나면 아직 보이는 채로 접히거나(짧음), 투명해진 메뉴가 남아 첫 조작을 먹는다(김).
+
+⚠️ **커서 잠금(`ClaimCursor`)을 `Begin` 안으로 되돌리지 않는다.** 둘을 합치면 코드는
+짧아지지만 WebGL 에서 깨진다 — 브라우저는 포인터 잠금을 **사용자 조작 직후에만**
+허용하는데 `Begin` 은 페이드가 끝난 420ms 뒤에 불린다. 거부는 예외도 로그도 없이
+조용해서, PC 를 골랐는데 시야만 안 도는 상태로 나타난다. 클릭에 가장 가까운 시점에
+요청하려고 나눠 둔 것이다.
 
 모드에 따라 달라지는 것은 셋뿐이다.
 
@@ -630,6 +648,55 @@ GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로
 인스펙터에서 값을 굴려 보며 찾는 것 자체는 정상적인 작업 방식이다. **찾은 값을
 부트스트랩에 옮겨 적고 메뉴를 다시 돌려 확정한다.** 씬에만 남기면 다음 생성에서 사라진다.
 
+### WebGL 배포 — GitHub Pages
+
+```powershell
+# Unity: File > Build Settings > WebGL > Build → 출력 폴더를 저장소 루트의 WebGLBuild 로
+.\Tools\deploy-webgl.ps1
+```
+
+`WebGLBuild/` 는 `.gitignore` 에 있다. main 에 담지 않고 스크립트가 배포 브랜치
+(`gh-pages`)로 따로 올린다 — **부모 없는 커밋 하나로 매번 덮어쓴다.** wasm 은 diff 가
+안 되는 바이너리라 히스토리를 남기면 저장소가 배포 횟수에 비례해 커진다.
+저장소 Settings > Pages 에서 Source = `gh-pages` / (root) 를 **한 번만** 설정한다.
+
+**손으로 `git add` 해서 올리지 않는다.** `.gitignore` 의 `**/[Bb]uild/` 가 Unity WebGL
+산출물의 핵심 폴더 이름(`Build/` — wasm·data·framework 가 전부 그 안에 있다)과 같아서
+`index.html` 만 올라가고 알맹이가 빠진다. 브라우저에는 404 만 뜬다. 스크립트는
+`--work-tree` 를 빌드 폴더로 잡고 `add -f` 로 이 함정을 피한다.
+
+WebGL 에서만 달라지는 것들 — **모두 서버 헤더를 못 주는 환경 때문이다.**
+
+| 항목 | 값 | 이유 |
+|---|---|---|
+| `webGLCompressionFormat` | `0` (Brotli) | 전송량이 가장 작다 |
+| `webGLDecompressionFallback` | **`1` (필수)** | Pages 는 `Content-Encoding: br` 을 못 준다. 끄면 `Unable to parse Build/*.br!` 로 죽는다 |
+| `webGLThreadsSupport` | `0` | 스레드는 COOP/COEP 헤더가 필요한데 Pages 는 못 준다 |
+| `webGLTemplate` | `PROJECT:NHNAI` | 기본 템플릿은 고정 크기 캔버스 + 로고 푸터라 페이지 가운데 작은 박스로 뜬다 |
+| 품질 레벨 | `0` = **Mobile** | `QualitySettings.asset` 의 `m_PerPlatformDefaultQuality: WebGL: 0`. **WebGL 이 무거우면 `PC_RPAsset` 이 아니라 `Mobile_RPAsset` 을 만진다** |
+
+배포 스크립트가 압축·스레드 설정을 푸시 전에 검사한다. 어긋나면 올라가기 전에 막힌다.
+
+**웹 페이지 껍데기는 `Assets/WebGLTemplates/NHNAI/index.html` 이다.** 이 파일이 하는 일
+셋 — 캔버스를 뷰포트에 꽉 채우고, 브라우저의 터치 제스처를 막고, 렌더 해상도를 죈다.
+
+| 만지는 곳 | 무엇이 달라지나 |
+|---|---|
+| `touch-action: none` · `overscroll-behavior: none` | **지우면 모바일 조작이 죽는다.** 시점 패드를 끄는 순간 페이지가 스크롤되거나 당겨서-새로고침이 걸린다 |
+| `MaxPixelRatio` (기본 2) | 폰의 DPR 은 3~4 다. 올리면 선명하고 느려진다. 포스트 프로세싱을 다 켠 상태라 이 값이 프레임을 가장 크게 좌우한다 |
+| `#if` 블록과 `{{{ }}}` 매크로 | **이름을 지어내지 않는다.** Unity 6.3 의 Minimal 템플릿에서 그대로 가져온 것이고, 틀리면 빌드가 조용히 빈 URL 을 넣는다. 원본은 `<Unity>/Editor/Data/PlaybackEngines/WebGLSupport/BuildTools/WebGLTemplates/Base/Minimal` |
+
+WebGL 에서 재현되지 않는 전제 셋 — 코드 문제가 아니라 브라우저 정책이다.
+
+- **배경음이 첫 클릭 전까지 무음이다.** 「시작 흐름」의 "씬이 열리는 순간부터 틀고 있어
+  메뉴가 떠 있는 동안에도 울린다" 가 WebGL 에서는 안 맞는다. 브라우저 자동재생 정책상
+  AudioContext 가 멈춘 채로 시작해서, PC/MOBILE 을 누른 뒤부터 들린다.
+- **landscape 고정이 안 걸린다.** `defaultScreenOrientation: 3` 은 네이티브 모바일
+  빌드용이고 브라우저는 보지 않는다 (Screen Orientation API 는 전체화면에서만 잠글 수
+  있다). 강제할 수단이 없어서 **막고 안내한다** — `RotateGate` 층이 세로일 때 화면을
+  덮는다. 세로 레이아웃을 만들지 않는다는 규칙은 그대로다.
+- **커서 잠금 타이밍이 빡빡하다.** 「시작 흐름」의 `ClaimCursor` ⚠️ 참조.
+
 ### 룩을 조정할 때 어디를 만지나
 
 | 바꾸고 싶은 것 | 만지는 곳 |
@@ -666,6 +733,12 @@ GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로
 | UI 요소가 안 보임 / 스타일이 안 먹음 | Window > UI Toolkit > Debugger |
 | 모바일 조작 UI 가 보이는데 안 눌림 | `InputSystem_Actions.inputactions` 의 `UI` 액션 맵. UI Toolkit 런타임이 포인터를 여기서 가져간다 |
 | 메뉴를 골랐는데 조작이 안 먹음 | `MainMenu.uss` 의 페이드 길이와 `MainMenuScreen.FadeOutMs` 가 어긋났다 |
+| **WebGL** — 페이지가 비었고 콘솔에 `Unable to parse Build/*.br!` | Decompression Fallback 이 꺼진 채 빌드됐다. 켜고 **다시 빌드**한다 — 설정만 고치면 이전 빌드가 그대로 올라간다 |
+| **WebGL** — 페이지에 `index.html` 만 뜨고 404 뿐 | `Build/` 가 `.gitignore` 에 걸려 빠졌다. 손으로 add 하지 말고 `Tools/deploy-webgl.ps1` 을 쓴다 |
+| **WebGL** — PC 를 골랐는데 시야가 안 돌아감 | 포인터 잠금이 거부됐다. 화면을 한 번 클릭하면 되잡힌다(그 클릭은 상호작용으로 안 센다). 반복되면 `ClaimCursor` 가 클릭 핸들러 안에서 불리는지 본다 |
+| **WebGL** — 손가락을 끄니 게임 대신 페이지가 스크롤됨 | 템플릿의 `touch-action: none` / `overscroll-behavior: none` 이 빠졌다 |
+| **WebGL** — 폰에서만 프레임이 안 나옴 | 템플릿의 `MaxPixelRatio` 를 낮춘다. 그 다음이 `Mobile_RPAsset` 과 SMAA 품질이다 |
+| 세로로 들었는데 안내가 안 뜸 / 가로인데 안 걷힘 | `RotateGateScreen` 이 콜백을 **문서 루트**가 아니라 `gate-root` 에 걸었다. 접힌 요소에는 `GeometryChangedEvent` 가 오지 않아 한 번 숨으면 못 돌아온다 |
 | 게임 UI 가 안 나타남 | `HudScreen.Begin` / `MobileControlsScreen.Begin` 이 안 불렸다 — 메뉴가 셋을 다 Bind 받았는지 본다 |
 
 **UI 쪽 "스타일이 안 먹는다"의 1순위 원인은 컴포넌트 USS를 `GameTheme.tss`에 등록하지 않은 것이다.**
@@ -720,6 +793,7 @@ Conventional Commits 표준 type(`feat` `fix` `docs` `style` `refactor` `perf` `
 | `art` | Blender 파이프라인·3D 에셋 — `ArtPipeline/`, `Assets/Art/` |
 | `prototype` | HTML 프로토타입 — `prototype/` |
 | `unity` | 프로젝트 설정·패키지 |
+| `webgl` | WebGL 빌드·배포 — `Assets/WebGLTemplates/`, `Tools/deploy-webgl.ps1` |
 
 컴포넌트가 늘어나 별도 scope가 필요해지면 여기와 `.gitmessage` ·
 `.githooks/commit-msg`를 **같이** 고친다. 세 곳이 어긋나면 커밋이 막힌다.

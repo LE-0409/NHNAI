@@ -52,7 +52,7 @@ if ! printf '%s' "$SUBJECT" | grep -Eq "^($TYPES)(\([a-z0-9-]+\))?!?: .+"; then
     revert    되돌리기
 
   scope (선택, 소문자·숫자·하이픈)
-    theme  ui  screen  game  editor  art  prototype  unity
+    theme  ui  screen  game  editor  art  prototype  unity  webgl
 
   예시
     feat(screen): 메인 메뉴 진입 애니메이션 추가
