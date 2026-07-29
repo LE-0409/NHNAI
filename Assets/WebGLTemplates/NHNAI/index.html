@@ -20,9 +20,14 @@
       렌더 타깃이 순식간에 커진다. 이 게임은 Bloom · SMAA · FilmGrain 을 다 켠
       상태라 그대로 두면 프레임이 안 나온다. 선명함이 아쉬우면 이 값부터 올린다.
 
-  ⚠️ 매크로({{{ }}})와 #if 블록은 Unity 6.3 의 Minimal 템플릿에서 그대로 가져왔다.
+  ⚠️ 중괄호 세 겹 매크로와 #if 블록은 Unity 6.3 의 Minimal 템플릿에서 그대로 가져왔다.
      이름을 지어내면 빌드가 조용히 빈 URL 을 넣는다.
      원본: <Unity>/Editor/Data/PlaybackEngines/WebGLSupport/BuildTools/WebGLTemplates/Base/Minimal
+
+  ⚠️ 이 주석에 매크로 문법을 그대로 적지 않는다. 전처리기는 HTML 주석을 가리지 않고
+     파일 전체를 정규식으로 훑어서(BuildTools/Preprocess.js:63) 주석 안의 것까지
+     평가한다. 값이 없는 매크로는 undefined 가 되고 .toString() 에서 빌드가 선다 —
+     설명하려고 적은 빈 매크로 하나가 실제로 빌드를 세웠다.
 -->
 <html lang="ko">
   <head>

@@ -554,6 +554,7 @@ cd ArtPipeline
 NHNAI > Setup  > 1. 아트 머티리얼 생성 · 갱신   ← 머티리얼만 다시 만든다
 NHNAI > Setup  > 2. PanelSettings 생성 · 갱신   ← UI Toolkit 런타임 기반
 NHNAI > Scenes > 독방 (CellRoom)                ← 위 둘과 UI 세 층을 포함해 통째로 만든다
+NHNAI > Build  > WebGL → WebGLBuild             ← 배포 스크립트가 보는 폴더로 뱉는다
 ```
 
 씬을 만들면 `EditorBuildSettings`에 **자동으로 등록**되고, 파일이 사라진 씬은
@@ -650,9 +651,24 @@ GUID 참조가 들어간 YAML 이라 손으로 쓰지 않고 에디터 코드로
 
 ### WebGL 배포 — GitHub Pages
 
+```
+1. Unity 메뉴  NHNAI > Build > WebGL → WebGLBuild
+2. PowerShell  .\Tools\deploy-webgl.ps1
+```
+
+**빌드 출력 폴더를 손으로 고르지 않는다.** Build Settings 창으로 빌드하면 매번 폴더를
+고르게 되고, 한 번 다른 곳으로 뱉으면 배포 스크립트는 그걸 모른 채 **예전 빌드를
+그대로 올린다.** 메뉴(`Assets/Editor/WebGlBuild.cs`)가 출력 경로를 배포 스크립트의
+기본값(`WebGLBuild/`)에 고정해 둔 이유다. 압축 설정도 빌드를 시작하기 **전에** 검사한다 —
+배포 단계에서 걸리면 빌드 시간을 이미 버린 뒤다.
+
+CLI 입구도 같은 함수를 부른다. **한 프로젝트를 두 인스턴스가 열 수 없어서 에디터가
+열려 있으면 잠금에 걸린다** — 에디터를 닫고 쓴다.
+
 ```powershell
-# Unity: File > Build Settings > WebGL > Build → 출력 폴더를 저장소 루트의 WebGLBuild 로
-.\Tools\deploy-webgl.ps1
+<Unity 설치 경로>\Unity.exe -quit -batchmode -logFile - `
+  -projectPath (Get-Location) `
+  -executeMethod NHNAI.EditorTools.WebGlBuild.BuildFromCommandLine
 ```
 
 `WebGLBuild/` 는 `.gitignore` 에 있다. main 에 담지 않고 스크립트가 배포 브랜치
@@ -733,7 +749,8 @@ WebGL 에서 재현되지 않는 전제 셋 — 코드 문제가 아니라 브�
 | UI 요소가 안 보임 / 스타일이 안 먹음 | Window > UI Toolkit > Debugger |
 | 모바일 조작 UI 가 보이는데 안 눌림 | `InputSystem_Actions.inputactions` 의 `UI` 액션 맵. UI Toolkit 런타임이 포인터를 여기서 가져간다 |
 | 메뉴를 골랐는데 조작이 안 먹음 | `MainMenu.uss` 의 페이드 길이와 `MainMenuScreen.FadeOutMs` 가 어긋났다 |
-| **WebGL** — 페이지가 비었고 콘솔에 `Unable to parse Build/*.br!` | Decompression Fallback 이 꺼진 채 빌드됐다. 켜고 **다시 빌드**한다 — 설정만 고치면 이전 빌드가 그대로 올라간다 |
+| **WebGL** — 빌드가 `Preprocessor error "TypeError: Cannot read property 'toString' of undefined"` 로 실패 | 템플릿 `index.html` 에 값 없는 매크로가 있다. **HTML 주석도 검사 대상이다** — 전처리기는 주석을 가리지 않고 파일 전체를 정규식으로 훑는다(`BuildTools/Preprocess.js:63`). 매크로 문법을 설명하는 주석을 쓸 때 중괄호 세 겹을 그대로 적으면 그게 평가된다 |
+| **WebGL** — 페이지가 비었고 콘솔에 `Unable to parse Build/*.br!` | Decompression Fallback 이 꺼진 채 빌드됐다. 켜고 **다시 빌드**한다 — 설정만 고치면 이전 빌드가 그대로 올라간다. 산출물 확장자가 `.br` 이 아니라 **`.unityweb`** 이면 fallback 이 켜진 것이다 |
 | **WebGL** — 페이지에 `index.html` 만 뜨고 404 뿐 | `Build/` 가 `.gitignore` 에 걸려 빠졌다. 손으로 add 하지 말고 `Tools/deploy-webgl.ps1` 을 쓴다 |
 | **WebGL** — PC 를 골랐는데 시야가 안 돌아감 | 포인터 잠금이 거부됐다. 화면을 한 번 클릭하면 되잡힌다(그 클릭은 상호작용으로 안 센다). 반복되면 `ClaimCursor` 가 클릭 핸들러 안에서 불리는지 본다 |
 | **WebGL** — 손가락을 끄니 게임 대신 페이지가 스크롤됨 | 템플릿의 `touch-action: none` / `overscroll-behavior: none` 이 빠졌다 |
