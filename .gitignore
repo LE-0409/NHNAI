@@ -101,6 +101,14 @@ InitTestScene*.unity*
 
 # prototype/ 은 소스이므로 커밋한다. 빌드 산출물이 생기면 여기에 추가한다.
 
+# WebGL 빌드 산출물. main 에는 담지 않는다 — Tools/deploy-webgl.ps1 이
+# 배포 브랜치로 따로 올린다.
+#
+# ⚠️ 위쪽 `**/[Bb]uild/` 가 Unity WebGL 산출물의 핵심 폴더(`Build/`, wasm·data·
+# framework 가 전부 여기 있다)와 이름이 같다. 배포 브랜치에 손으로 `git add` 하면
+# index.html 만 올라가고 알맹이가 통째로 빠진다 — 그래서 배포는 스크립트로 한다.
+/WebGLBuild/
+
 # ArtPipeline — Blender 에셋 파이프라인 생성물/도구 (커밋 제외)
 # 파이프라인 소스(lib·kit_templates·project·assets)는 커밋한다.
 /ArtPipeline/tools/
