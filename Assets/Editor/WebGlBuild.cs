@@ -18,7 +18,7 @@ namespace NHNAI.EditorTools
     /// 열린 채로는 CLI 빌드가 잠금에 걸린다.
     ///
     /// <code>
-    /// Unity.exe -quit -batchmode -logFile - -projectPath D:\00git\NHNAI ^
+    /// Unity.exe -quit -batchmode -logFile - -projectPath &lt;저장소 루트&gt; ^
     ///           -executeMethod NHNAI.EditorTools.WebGlBuild.BuildFromCommandLine
     /// </code>
     /// </summary>

@@ -27,6 +27,7 @@ uGUI는 UI Toolkit으로 되지 않는 기능에 한해서만 쓴다 (아래 「
 | 빌드 타깃 | PC (Windows/Mac) + 모바일 (Android/iOS) + WebGL (GitHub Pages) |
 | 화면 방향 | **landscape 고정.** 세로 모드 미지원 |
 | 기준 해상도 | 1920 x 1080 |
+| 저장소 공개 | **public.** 담는 것이 곧 공개다 — 「금지 사항」의 에셋 출처·로컬 경로 항목을 본다 |
 
 화면 방향과 기준 해상도는 문서에만 있는 규칙이 아니라 `ProjectSettings/ProjectSettings.asset`에
 실제로 박혀 있다 — `allowedAutorotateToPortrait`/`PortraitUpsideDown`이 `0`,
@@ -114,7 +115,9 @@ NHNAI/
     │   ├── Materials/*.mat    ← ArtMaterialLibrary 가 생성
     │   └── Palette/palette.png
     │
-    ├── Audio/*.mp3            ← 효과음 · 배경 앰비언스
+    ├── Audio/                  ← 효과음 · 배경 앰비언스 (전부 Pixabay)
+    │   ├── *.mp3
+    │   └── README.md           ← 출처·라이선스. **소리를 추가하면 여기 한 줄 같이 쓴다**
     │
     ├── Scripts/               ← 어셈블리 NHNAI.Game — UI 에 의존하지 않는 게임 코드
     │   ├── NHNAI.Game.asmdef
@@ -776,6 +779,10 @@ WebGL 에서 재현되지 않는 전제 셋 — 코드 문제가 아니라 브�
   전부 `PlayerInputSource`를 거친다. 직접 읽으면 PC 에서만 되는 조작이 생긴다.
 - **`Assets/Scripts/`에 만능 `Utils.cs`를 만들지 않는다.** 기능별 폴더에 자기완결 파일로 둔다.
 - **프로토타입 JS에만 있는 동작을 만들지 않는다.** 정본은 항상 C#이다.
+- **출처를 모르는 에셋을 넣지 않는다.** 이 저장소는 public 이라 담는 것이 곧 재배포다.
+  받아 온 오디오·이미지는 `Assets/Audio/README.md` 처럼 출처와 라이선스를 **같은 커밋에** 적는다.
+- **로컬 절대 경로를 커밋하지 않는다.** 문서·주석·스크립트 전부. 개인 경로가 필요하면
+  환경변수나 저장소 밖 설정 파일로 뺀다 (`ArtPipeline` 이 `%APPDATA%` 를 쓰는 방식).
 
 ---
 
@@ -864,6 +871,8 @@ docs/reference/unity-ui-toolkit/    ← 자주 쓰는 페이지 벤더링. READM
 `docs/reference/unity-ui-toolkit/`에 새 페이지로 추가하거나 이 파일에 남긴다.
 **저장소 밖 경로를 참조 문서로 인용하지 않는다** — 다른 개발자의 클론에서 깨진다.
 
-원본 자료(작성자 로컬 전용, `D:\00git\_Main\` 아래 — Coding-Inventory 위키의 UI Toolkit 46페이지·
+원본 자료(**작성자 로컬 전용** — Coding-Inventory 위키의 UI Toolkit 46페이지·
 LLM 설계 패턴 12페이지, awesome-design-md의 DESIGN.md 원본 73종)는 저장소에 없는 주제를
 찾을 때만 쓰고, 인용한 내용은 반드시 `docs/reference/`로 복사해 저장소를 자기완결로 유지한다.
+**이 저장소는 public 이다.** 로컬 절대 경로를 문서에 적지 않는다 — 다른 개발자의
+클론에서 깨지는 것이 첫 이유고, 공개 저장소에서는 작성자의 디렉터리 구조가 드러난다.

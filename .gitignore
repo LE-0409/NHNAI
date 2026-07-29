@@ -116,3 +116,16 @@ InitTestScene*.unity*
 /ArtPipeline/previews/
 /ArtPipeline/reports/
 __pycache__/
+
+# 자격증명 — 이 저장소는 public 이다. 한 번 푸시되면 히스토리에서 지워도 남는다.
+# 실수로 담기는 것을 막으려고 확장자 단위로 미리 걸어 둔다. 지금 이 패턴에
+# 걸리는 파일은 없다 — 앞으로를 위한 것이다.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+secrets.json
