@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:engine="UnityEngine.UIElements">
+    <!-- 세로로 든 화면을 막는 층. **모든 층 위에 덮인다** (sortingOrder 30 —
+         메인메뉴 20 보다도 위다). 가로일 때는 display:none 이라 아예 없는 것과 같다.
+
+         메인메뉴의 스크림과 달리 **불투명하게 덮는다.** 메뉴는 뒤로 방이 비쳐야
+         "메뉴가 걷힌다"로 읽히지만, 이 층은 반대다 — 뒤가 비치면 세로로도 놀 수
+         있어 보여서 손가락이 화면으로 간다.
+
+         왜 필요한가: 이 게임은 landscape 고정인데(ProjectSettings) **WebGL 에서는
+         그 설정이 무시된다.** 브라우저는 Unity 의 화면 방향 설정을 보지 않고,
+         Screen Orientation API 는 전체화면일 때만 방향을 잠글 수 있다.
+         그래서 강제하는 대신 막고 안내한다.
+
+         아이콘은 실제 자식 둘로 만든다 — USS 에 ::before / ::after 가 없다. -->
+    <Style src="project://database/Assets/UI/Screens/RotateGate/RotateGate.uss" />
+
+    <engine:VisualElement name="gate-root" class="rotate-gate">
+        <engine:VisualElement name="gate-phone" class="rotate-gate__phone" picking-mode="Ignore">
+            <engine:VisualElement class="rotate-gate__phone-screen" picking-mode="Ignore" />
+        </engine:VisualElement>
+        <engine:Label class="rotate-gate__title" text="ROTATE YOUR DEVICE" picking-mode="Ignore" />
+        <engine:Label class="rotate-gate__note" text="LANDSCAPE ONLY" picking-mode="Ignore" />
+    </engine:VisualElement>
+</engine:UXML>

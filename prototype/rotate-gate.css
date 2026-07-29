@@ -1,0 +1,110 @@
+/* 세로 화면 안내 — RotateGate.uss 와 쌍이다.
+ *
+ * USS 호환 규칙을 지킨다: flexbox 만, gap 없음(margin 으로), 의사 요소 없음,
+ * box-shadow 없음, @media 없음(판단은 C# 이 한다), 색은 rgb()/rgba().
+ *
+ * DESIGN.md 가 아직 없어 토큰이 없다. MainMenu.uss 와 같은 방식으로 루트 클래스에
+ * --gate-* 로컬 변수를 두고 승격 후보로 표시한다. */
+
+/* --- 프로토타입 전용 (USS 로 옮기지 않는다) --------------------------------- */
+
+body {
+    margin: 0;
+    /* Unity 는 패널이 곧 화면이다. 브라우저에서만 높이를 잡아 준다 */
+    height: 100vh;
+}
+
+.stage {
+    display: flex;
+    height: 100%;
+    /* 창을 세로로 좁혀서 확인한다 */
+}
+
+/* --- 여기서부터 RotateGate.uss 로 옮긴다 ------------------------------------ */
+
+.rotate-gate {
+    /* 토큰 승격 후보: 세로일 때 화면을 덮는 색.
+       메뉴 스크림(rgba .62)과 달리 **불투명**하다 — 뒤가 비치면 세로로도 놀 수
+       있어 보인다 */
+    --gate-backdrop: rgb(4, 4, 6);
+    /* 토큰 승격 후보: 안내 문구 — 메뉴 제목과 같은 흰색 */
+    --gate-title-color: rgb(226, 226, 226);
+    /* 토큰 승격 후보: 보조 문구 — 메뉴 버튼 글자와 같다 */
+    --gate-note-color: rgb(198, 198, 202);
+    /* 토큰 승격 후보: 아이콘 윤곽 */
+    --gate-icon-color: rgb(198, 198, 202);
+    /* 토큰 승격 후보: 아이콘 화면 안쪽 */
+    --gate-icon-fill: rgba(226, 226, 226, 0.09);
+
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--gate-backdrop);
+
+    /* ⚠️ USS 로 옮길 때 이 줄을 그대로 가져가지 않는다. USS 에서는 기본이
+       `display: none` 이고 `.rotate-gate--shown` 이 붙어야 flex 가 된다 —
+       세로/가로 판단은 RotateGateScreen.cs 가 한다 (USS 에 @media 가 없다).
+       여기서는 항상 보여야 룩을 볼 수 있어서 켜 둔 것뿐이다.
+       (USS 는 flex-direction 기본값이 이미 column 이라 그 줄도 없어도 된다) */
+    display: flex;
+}
+
+/* 세로로 든 기기 모양. 90° 돌아가는 동안 가로 자리를 침범하지 않도록
+   회전축은 가운데(기본값)로 둔다. */
+.rotate-gate__phone {
+    width: 108px;
+    height: 184px;
+    flex-shrink: 0;           /* 세로 화면에서 눌려 찌그러지지 않게 */
+    border-width: 5px;
+    border-style: solid;      /* USS 에는 없다 — 아래 USS 주석 참조 */
+    border-color: var(--gate-icon-color);
+    border-radius: 14px;
+
+    /* gap 이 없다. 아이콘과 문구 사이는 여기서 벌린다 */
+    margin-bottom: 56px;
+
+    /* 회전 힌트. 클래스가 붙었다 떨어지고 이 transition 이 그린다 —
+       USS 에 @keyframes 가 없어서 쓰는 방식이다.
+       transition 계열은 var() 를 쓰지 않는다 — CLAUDE.md */
+    transition-property: rotate;
+    transition-duration: 900ms;
+    /* → USS: ease-in-out-cubic */
+    transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+
+    display: flex;            /* 프로토타입에만 필요 */
+}
+
+.rotate-gate__phone--turned {
+    rotate: -90deg;
+}
+
+.rotate-gate__phone-screen {
+    flex-grow: 1;
+    margin: 9px;
+    border-radius: 5px;
+    background-color: var(--gate-icon-fill);
+}
+
+/* 대문자는 문자열 자체로 만든다 — USS 에 text-transform 이 없다.
+   ⚠️ 한글을 쓰지 않는 이유: 폰트가 아직 정해지지 않아 Unity 기본 런타임 폰트로
+   그려지는데 거기에는 한글 글리프가 없다. DESIGN.md 와 함께 한글 FontAsset 이
+   생기면 그때 문구를 한국어로 바꾼다. */
+.rotate-gate__title {
+    font-size: 44px;
+    letter-spacing: 8px;
+    font-weight: bold;
+    color: var(--gate-title-color);
+    text-align: center;
+    /* 자간이 마지막 글자 뒤에도 붙어 우로 밀린다. 그만큼 당겨 광학적으로 맞춘다 */
+    margin-right: -8px;
+    margin-bottom: 18px;
+}
+
+.rotate-gate__note {
+    font-size: 20px;
+    letter-spacing: 5px;
+    color: var(--gate-note-color);
+    text-align: center;
+    margin-right: -5px;
+}

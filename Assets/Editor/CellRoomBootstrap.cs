@@ -7,6 +7,7 @@ using NHNAI.Game.Slot;
 using NHNAI.UI.Hud;
 using NHNAI.UI.MainMenu;
 using NHNAI.UI.MobileControls;
+using NHNAI.UI.RotateGate;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -32,6 +33,7 @@ namespace NHNAI.EditorTools
         const string HudUxmlPath = "Assets/UI/Screens/Hud/Hud.uxml";
         const string MobileControlsUxmlPath = "Assets/UI/Screens/MobileControls/MobileControls.uxml";
         const string MainMenuUxmlPath = "Assets/UI/Screens/MainMenu/MainMenu.uxml";
+        const string RotateGateUxmlPath = "Assets/UI/Screens/RotateGate/RotateGate.uxml";
         const string CoinClipPath = "Assets/Audio/CoinDispense.mp3";
         const string ReelTickClipPath = "Assets/Audio/ReelTick.mp3";
         const string CoinPickupClipPath = "Assets/Audio/CoinPickup.mp3";
@@ -114,6 +116,8 @@ namespace NHNAI.EditorTools
             BuildCoins(machineRig, playerRig);
             // 메인메뉴는 위 셋(입력·HUD·조작 층)을 전부 알아야 하므로 마지막이다.
             BuildMainMenu(playerRig, mobileControls, panel);
+            // 세로 안내는 아무것도 몰라도 된다 — 화면 비율만 본다. 그래서 맨 위에 덮는다.
+            BuildRotateGate(panel);
             BuildPostProcessing();
             ConfigureRenderSettings();
 
@@ -884,6 +888,37 @@ namespace NHNAI.EditorTools
             doc.sortingOrder = 20f;
 
             go.AddComponent<MainMenuScreen>().Bind(player.Input, player.Hud, mobileControls);
+        }
+
+        // --- 세로 화면 안내 ----------------------------------------------------
+
+        /// <summary>
+        /// 세로로 든 화면을 막는 층. 다른 층과 달리 <c>Bind</c> 가 없다 —
+        /// 게임 상태를 보지 않고 패널이 세로인지만 본다.
+        ///
+        /// <c>sortingOrder</c> 는 메인메뉴(20)보다도 위다. 세로로 들었으면 메뉴조차
+        /// 고를 수 없어야 한다 — 세로로 고른 뒤 그대로 게임이 시작되면 조작 UI 가
+        /// 안 맞는 자리에 놓인 채 첫 화면을 맞는다.
+        ///
+        /// 이 층이 있는 이유는 landscape 고정 설정이 **WebGL 에서 안 걸리기**
+        /// 때문이다. 자세한 것은 <see cref="RotateGateScreen"/>.
+        /// </summary>
+        static void BuildRotateGate(PanelSettings panel)
+        {
+            var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(RotateGateUxmlPath);
+            if (uxml == null)
+            {
+                Debug.LogError($"[NHNAI] 세로 안내 UXML 이 없다: {RotateGateUxmlPath}");
+                return;
+            }
+
+            var go = new GameObject("RotateGate");
+            var doc = go.AddComponent<UIDocument>();
+            doc.panelSettings = panel;
+            doc.visualTreeAsset = uxml;
+            doc.sortingOrder = 30f;
+
+            go.AddComponent<RotateGateScreen>();
         }
 
         // --- 포스트 프로세싱 --------------------------------------------------
