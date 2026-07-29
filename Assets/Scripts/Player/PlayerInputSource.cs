@@ -85,14 +85,30 @@ namespace NHNAI.Game.Player
         }
 
         /// <summary>
+        /// 조작 방식을 고른 **그 순간**, 메뉴 버튼의 클릭 핸들러 안에서 불린다.
+        /// 하는 일은 커서 잠금 하나뿐이다 — 입력은 아직 살지 않는다
+        /// (<see cref="Begin"/> 이 그 일을 한다).
+        ///
+        /// **왜 <see cref="Begin"/> 에서 떼어냈나 — WebGL 때문이다.** 브라우저는 포인터
+        /// 잠금을 사용자 조작이 방금 있었을 때만 허용한다. Begin 은 메뉴 페이드가 끝난
+        /// 뒤에 불리므로 그 창에서 벗어날 수 있고, 그러면 잠금이 **조용히 거부된다** —
+        /// PC 를 골랐는데 시야가 안 도는 상태가 되고 원인이 화면에 안 나타난다.
+        /// 클릭에 가장 가까운 시점에 요청하면 이 조건을 확실히 만족한다.
+        ///
+        /// 잠금이 그래도 거부되면 <see cref="ReadDesktop"/> 의 되잡기 경로가 받아 준다 —
+        /// 화면을 한 번 더 클릭하면 잠긴다. 그 클릭은 상호작용으로 세지 않는다.
+        /// </summary>
+        public void ClaimCursor(ControlMode mode) => SetCursorLocked(mode == ControlMode.Pc);
+
+        /// <summary>
         /// 메인메뉴가 사라진 뒤 불린다. **이때부터 게임이 조작을 받는다.**
-        /// 커서 잠금도 여기서 결정된다 — 메뉴가 떠 있는 동안 잠그면 버튼을 못 누른다.
+        /// 커서 잠금은 여기가 아니라 <see cref="ClaimCursor"/> 가 한다 — 메뉴가 떠 있는
+        /// 동안 잠그면 버튼을 못 누르고, 너무 늦게 잠그면 WebGL 에서 거부된다.
         /// </summary>
         public void Begin(ControlMode mode)
         {
             _mode = mode;
             _running = true;
-            SetCursorLocked(mode == ControlMode.Pc);
         }
 
         void Update()

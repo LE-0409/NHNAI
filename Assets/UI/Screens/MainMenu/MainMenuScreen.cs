@@ -117,6 +117,12 @@ namespace NHNAI.UI.MainMenu
             if (hud != null) hud.Begin(mode);
             if (mobileControls != null) mobileControls.Begin(mode);
 
+            // ⚠️ 커서 잠금만은 **이 클릭 핸들러 안에서** 한다. 아래 페이드 뒤로 미루면
+            // WebGL 에서 브라우저가 거부한다 — 포인터 잠금은 사용자 조작 직후에만
+            // 허용되고, 거부는 예외도 로그도 없이 조용하다. 자세한 이유는
+            // PlayerInputSource.ClaimCursor 주석.
+            if (input != null) input.ClaimCursor(mode);
+
             // 조작은 메뉴가 완전히 사라진 뒤에 살아난다.
             _root.schedule.Execute(() =>
             {
