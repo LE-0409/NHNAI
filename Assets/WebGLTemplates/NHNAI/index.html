@@ -20,6 +20,10 @@
       렌더 타깃이 순식간에 커진다. 이 게임은 Bloom · SMAA · FilmGrain 을 다 켠
       상태라 그대로 두면 프레임이 안 나온다. 선명함이 아쉬우면 이 값부터 올린다.
 
+    · **포인터 잠금 거부를 삼킨다.** 안 삼키면 거부가 처리되지 않은 rejection 으로
+      남아 Unity 로더가 alert() 를 띄운다 — 게임은 멀쩡한데 플레이 도중 오류창이
+      뜬다. 아래 스크립트의 ⚠️ 주석에 경로가 다 적혀 있다.
+
   ⚠️ 중괄호 세 겹 매크로와 #if 블록은 Unity 6.3 의 Minimal 템플릿에서 그대로 가져왔다.
      이름을 지어내면 빌드가 조용히 빈 URL 을 넣는다.
      원본: <Unity>/Editor/Data/PlaybackEngines/WebGLSupport/BuildTools/WebGLTemplates/Base/Minimal
@@ -164,6 +168,44 @@
 
       // 캔버스 위 우클릭 메뉴는 조작을 가린다 ('사용'을 오래 누르면 뜬다).
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      // ⚠️ 포인터 잠금 거부를 삼킨다 — 지우면 플레이 도중 알림창이 뜬다.
+      //
+      // 브라우저는 사용자 조작 직후가 아닌 포인터 잠금 요청을 거부한다. 게임은 그
+      // 거부를 정상 경로로 다룬다 (화면을 한 번 클릭하면 되잡는다 —
+      // PlayerInputSource.ClaimCursor 주석). 문제는 Unity 가 쓰는 emscripten 이
+      // 캔버스의 requestPointerLock 을 .catch() 없이 부른다는 것이다. Chromium 에서
+      // 이 함수는 Promise 를 돌려주므로 거부가 **처리되지 않은 rejection** 으로 남고,
+      // Unity 로더는 window 의 "unhandledrejection" 까지 오류로 잡아 alert() 를 띄운다
+      // (UnityLoader.js 의 errorHandler). 게임은 멀쩡한데
+      // "NotAllowedError: A user gesture is required to request Pointer Lock." 창이
+      // 플레이 중에 튀어나오는 이유다.
+      //
+      // 클릭에 맞춰 요청해도 이 경로는 남는다. 요청은 Unity 프레임 루프에서 나가므로
+      // emscripten 이 다음 이벤트 핸들러까지 미뤄 두는데(JSEvents.deferCall), 그
+      // 핸들러가 키 이벤트일 수 있고 — Esc·Alt 같은 키는 브라우저가 '사용자 조작'
+      // 으로 세지 않아 그때 흘러 나간 요청은 거부로 끝난다. 그래서 여기서 막는다.
+      (function () {
+        var requestLock = Element.prototype.requestPointerLock;
+        if (!requestLock) return;
+
+        Element.prototype.requestPointerLock = function () {
+          var pending;
+          try {
+            // Safari·Firefox 는 Promise 가 아니라 undefined 를 돌려준다.
+            pending = requestLock.apply(this, arguments);
+          } catch (e) {
+            console.info("[NHNAI] 포인터 잠금 요청이 실패했다: " + e);
+            return;
+          }
+          if (pending && typeof pending.catch === "function") {
+            return pending.catch(function (e) {
+              console.info("[NHNAI] 포인터 잠금이 거부됐다 — 화면을 클릭하면 다시 잡는다: " + e);
+            });
+          }
+          return pending;
+        };
+      })();
 
       function showError(message) {
         var box = document.querySelector("#error");

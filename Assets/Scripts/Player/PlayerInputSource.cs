@@ -85,6 +85,21 @@ namespace NHNAI.Game.Player
         }
 
         /// <summary>
+        /// 창이 포커스를 잃으면 브라우저·OS 가 포인터 잠금을 **스스로** 푼다
+        /// (탭 전환 · alt-tab · 다른 창 클릭). 그때 우리 쪽 희망 상태를 Locked 로
+        /// 남겨 두면 두 상태가 어긋나고, 포커스가 돌아올 때 잠금이 사용자 조작
+        /// 없이 다시 요청된다 — 브라우저는 그것을 거부한다.
+        ///
+        /// 여기서 같이 풀어 두면 <see cref="ReadDesktop"/> 의 되잡기 클릭 하나로
+        /// 정상 경로를 탄다. 되잡기는 **클릭에서만** 한다 — 포커스가 돌아온 것
+        /// 자체는 사용자 조작이 아니라서 여기서 다시 잠그면 또 거부된다.
+        /// </summary>
+        void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus) SetCursorLocked(false);
+        }
+
+        /// <summary>
         /// 조작 방식을 고른 **그 순간**, 메뉴 버튼의 클릭 핸들러 안에서 불린다.
         /// 하는 일은 커서 잠금 하나뿐이다 — 입력은 아직 살지 않는다
         /// (<see cref="Begin"/> 이 그 일을 한다).
@@ -97,6 +112,12 @@ namespace NHNAI.Game.Player
         ///
         /// 잠금이 그래도 거부되면 <see cref="ReadDesktop"/> 의 되잡기 경로가 받아 준다 —
         /// 화면을 한 번 더 클릭하면 잠긴다. 그 클릭은 상호작용으로 세지 않는다.
+        ///
+        /// ⚠️ 거부는 **게임 쪽에만** 조용하다. 브라우저에서는 거부된 Promise 로 남고,
+        /// 아무도 받지 않으면 Unity 로더가 그것을 오류로 잡아 alert 를 띄운다. 삼키는
+        /// 것은 WebGL 템플릿(<c>Assets/WebGLTemplates/NHNAI/index.html</c>)의 일이다 —
+        /// 그 조각을 지우면 플레이 도중 "A user gesture is required to request Pointer
+        /// Lock." 창이 뜬다.
         /// </summary>
         public void ClaimCursor(ControlMode mode) => SetCursorLocked(mode == ControlMode.Pc);
 
