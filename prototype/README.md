@@ -30,7 +30,8 @@ Assets/UI/Screens/MainMenu/MainMenu.uss   .main-menu { --menu-scrim: rgba(4, 4, 
 색이나 간격을 바꿀 때는 **두 파일을 같이 고친다.** 한쪽만 고치면 브라우저에서 본 것과
 게임 화면이 달라지고, 프로토타입이 거짓말을 하기 시작한다.
 
-전역 토큰 파일은 두지 않았다 — 이유는 CLAUDE.md 「디자인 값은 화면마다 로컬 변수로 모은다」.
+전역 토큰 파일은 두지 않았다 — 이유는 `.claude/skills/unity-ui-authoring/` 스킬의
+「디자인 값은 화면마다 로컬 변수로 모은다」.
 
 ## CSS → USS 치환표
 
@@ -46,7 +47,7 @@ USS 는 CSS 의 부분집합이다. **속성별 지원 여부 전체 표는
 | `class="..."` | 그대로 |
 | `--foo: 1px` / `var(--foo)` | 그대로 (색·길이 한정) |
 | `:hover` · `:active` | 그대로 |
-| `transition-*` | 그대로. **단 `var()` 를 쓰지 않고 리터럴** (CLAUDE.md) |
+| `transition-*` | 그대로. **단 `var()` 를 쓰지 않고 리터럴** (`unity-ui-authoring` 스킬) |
 | `translate` · `scale` | 그대로. 단 계산으로 정해지는 값은 C# 인라인 |
 
 **프로토타입에서 쓰지 않은 것** (USS 에 없어서 애초에 안 썼다):
@@ -71,5 +72,5 @@ CLAUDE.md 금지 사항: 프로토타입 JS 에만 있는 동작을 만들지 �
 
 ## 새 화면을 추가할 때
 
-절차는 CLAUDE.md 「새 화면을 만들 때」를 따른다. `.claude/skills/unity-ui-prototype/`
-스킬이 그 1단계를 담당한다.
+절차는 `.claude/skills/unity-ui-authoring/` 스킬의 「새 화면을 만들 때」를 따른다.
+`.claude/skills/unity-ui-prototype/` 스킬이 그 1단계를 담당한다.

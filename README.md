@@ -175,16 +175,19 @@ wasm 은 diff 가 안 되는 바이너리라 **부모 없는 커밋 하나로 �
 전부 [Claude Code](https://claude.com/claude-code) 로 만들었다. 이 절은 "AI 를 썼다" 가
 아니라 **무엇을 해서 왕복을 줄였는지**를 저장소에서 확인할 수 있는 것만 적는다.
 
-### 1. 규칙을 매번 설명하지 않는다 — `CLAUDE.md`
+### 1. 규칙을 매번 설명하지 않는다 — `CLAUDE.md` + 스킬
 
 세션마다 다시 말해야 하는 것들(어떤 UI 프레임워크를 쓰는지, 씬을 손으로 고치면 안 되는
-이유, 커밋 형식)을 한 파일에 못 박았다. 새 세션은 이걸 읽고 시작하므로 같은 설명이
-반복되지 않는다.
+이유, 커밋 형식)을 못 박았다. 새 세션은 이걸 읽고 시작하므로 같은 설명이 반복되지 않는다.
+
+단, `CLAUDE.md` 는 **매 세션 통째로 읽히는** 파일이라 길어지면 그대로 비용이 된다.
+그래서 상시 필요한 것(확정 사항 · 저장소 지도 · 금지 사항 · 커밋 형식)만 남기고,
+작업할 때만 필요한 상세 규칙은 `.claude/skills/` 로 내렸다 — 해당 작업을 시작할 때만 읽힌다.
 
 ### 2. 한 번 밟은 함정은 문서가 대신 기억한다
 
-`CLAUDE.md` 의 「디버깅 도구」 표는 일반적인 팁 모음이 아니라 **이 프로젝트에서 실제로
-겪은 증상 → 원인** 목록이다.
+`nhnai-troubleshooting` 스킬의 증상 표는 일반적인 팁 모음이 아니라 **이 프로젝트에서
+실제로 겪은 증상 → 원인** 목록이다.
 
 | 증상 | 원인 |
 |---|---|
@@ -204,8 +207,17 @@ USS 가 어떤 CSS 속성을 지원하는지 같은 질문은 웹 검색 왕복 
 
 ### 4. 반복 절차는 스킬로 굳힌다
 
-`.claude/skills/unity-ui-prototype/` — 화면 프로토타입 만드는 절차(지켜야 할 USS 제약,
-파일 짝 이름, 완료 기준)를 스킬로 두었다. 절차를 매번 프롬프트로 다시 쓰지 않는다.
+절차와 상세 규칙은 `.claude/skills/` 에 작업 단위로 두었다. 매번 프롬프트로 다시 쓰지 않고,
+그 작업을 할 때만 읽힌다.
+
+| 스킬 | 담당 |
+|---|---|
+| `unity-ui-prototype` | 새 화면의 HTML/CSS 프로토타입 (파이프라인 1단계) |
+| `unity-ui-authoring` | UXML·USS·컴포넌트 작성, USS 제약, 폰트·문구 규칙 |
+| `unity-scene-bootstrap` | 씬 생성, 조명·포스트 프로세싱, 조작·시작 흐름 |
+| `blender-art-pipeline` | Blender 헤드리스 에셋 생성, 팔레트, 머티리얼 리맵 |
+| `webgl-deploy` | WebGL 빌드·gh-pages 배포·템플릿, 브라우저 정책 |
+| `nhnai-troubleshooting` | 실제로 겪은 증상 → 원인 목록 |
 
 ### 5. 독립적인 작업은 worktree 로 동시에
 
@@ -287,7 +299,8 @@ ArtPipeline/        Blender 헤드리스 에셋 파이프라인 (Unity 밖, 벤�
 prototype/          HTML/CSS 프로토타입 (Unity 밖, 빌드에 안 들어감)
 docs/reference/     UI Toolkit 참조 문서 11페이지 (벤더링)
 Tools/              deploy-webgl.ps1 — gh-pages 배포
-CLAUDE.md           AI 작업 규칙의 정본
+CLAUDE.md           AI 작업 규칙 — 매 세션 읽히는 것만
+.claude/skills/     작업별 상세 규칙 — 그 작업을 할 때 읽힌다
 ```
 
 ## 개발에 참여하려면
@@ -298,7 +311,7 @@ git config commit.template .gitmessage
 ```
 
 `core.hooksPath` 는 저장소 로컬 설정이라 버전 관리되지 않는다. 클론마다 한 번 실행한다.
-규칙 전체는 `CLAUDE.md` 를 본다.
+규칙은 `CLAUDE.md` 와 `.claude/skills/` 를 본다.
 
 ## 에셋 출처
 

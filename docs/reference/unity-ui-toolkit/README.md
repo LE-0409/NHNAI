@@ -7,10 +7,10 @@
 ## 읽는 규칙
 
 - **웹 검색 전에 여기부터 본다.** 여기에 없으면 웹 검색으로 보충하고,
-  알아낸 내용은 이 폴더에 새 페이지로 추가하거나 `CLAUDE.md`에 반영해
-  저장소를 자기완결로 유지한다.
+  알아낸 내용은 이 폴더에 새 페이지로 추가하거나 `.claude/skills/unity-ui-authoring/`에
+  반영해 저장소를 자기완결로 유지한다.
 - 이 문서들은 **일반 지식**이다. 프로젝트 특화 결정과 충돌하면
-  `CLAUDE.md`와 `prototype/README.md`가 우선한다.
+  `CLAUDE.md` · `.claude/skills/`의 스킬과 `prototype/README.md`가 우선한다.
 
 ## 페이지 목록
 
