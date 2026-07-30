@@ -1,8 +1,15 @@
-# NHNAI
+<p align="center">
+  <a href="https://le-0409.github.io/SlotMachine-NHN/">
+    <img src="Slot-Machine.png" width="100%"
+         alt="SLOT MACHINE — 전등 하나가 켜진 독방에 슬롯머신이 서 있다">
+  </a>
+</p>
+
+# SLOT MACHINE
 
 전등 하나가 켜진 독방. 그 안에 슬롯머신 하나와 동전 세 개가 있다.
 
-**▶ 브라우저에서 바로 하기 — <https://le-0409.github.io/NHNAI/>**
+**▶ 브라우저에서 바로 하기 — <https://le-0409.github.io/SlotMachine-NHN/>**
 
 PC · 모바일 모두 브라우저에서 돌아간다. 첫 화면에서 `PC` 또는 `MOBILE` 을 고른다.
 가로로 든 화면이 필요하다 — 세로로 들면 돌려 달라는 안내가 덮는다.
@@ -51,8 +58,16 @@ PC · 모바일 모두 브라우저에서 돌아간다. 첫 화면에서 `PC` �
 
 ## 직접 열어 보려면
 
-**Unity 6000.3.10f1 (Unity 6.3)** 이 필요하다. 클론해서 프로젝트를 열고
-`Assets/Scenes/CellRoom.unity` 를 Play 하면 된다. 씬은 이것 하나뿐이다.
+**Unity 6000.3.10f1 (Unity 6.3)** 이 필요하다.
+
+```bash
+git clone https://github.com/LE-0409/SlotMachine-NHN.git
+```
+
+프로젝트를 열고 `Assets/Scenes/CellRoom.unity` 를 Play 하면 된다. 씬은 이것 하나뿐이다.
+
+Unity 프로젝트 폴더와 어셈블리 이름(`NHNAI.Game` · `NHNAI.UI`)은 `NHNAI` 다 —
+저장소 이름과 다르니 경로에서 보고 놀라지 않아도 된다.
 
 Blender 는 **필요 없다.** 3D 에셋이 `.fbx` 로 커밋되어 있다. 모델을 다시 만들 때만 쓴다
 (→ [ArtPipeline](#3d-에셋은-blender-스크립트가-만든다)).
